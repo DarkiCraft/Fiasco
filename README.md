@@ -94,7 +94,13 @@ app.get("/users/{id}", [](int id, db& database) -> user_response {
 ```
 
 ## Planned Features
-- 
+- Query parameter parsing
+- Middleware pipeline
+- Request logging and hooks
+- Static file serving
+- HTTPS / TLS support
+- WebSocket support
+- HTTP/2
 
 ## Dependencies
 
