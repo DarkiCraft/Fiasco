@@ -26,11 +26,10 @@ app.get("/text", []() {
     return "Hello, World!";
 });
 
-using fiasco::response::json;
 app.get("/json", []() {
-    return json(R"({
-        "message": "Hello, World!",
-    })");
+    return fiasco::json{
+        {"message", "Hello, World!"}
+    };
 });
 
 app.run(8080);
@@ -41,14 +40,13 @@ app.run(8080);
 Path parameters are automatically extracted and assigned to function arguments left to right
 
 ```c++
-using fiasco::response::json;
 app.post("/users/{user_id}/deposit/{amount}", [](int user_id, double amount) {
     // business logic
     // ...
     
-    return json(R"({
-        "message": "ok"
-    })");
+    return fiasco::json{
+        {"message", "ok"}
+    };
 });
 ```
 Note that the names of the arguments in the handler do not matter as they are assigned as they appear in the endpoint url
@@ -88,9 +86,9 @@ app.post("/users/{department_id}", [](int department_id, create_user_request req
     // ... = req.username;
     // ...
     
-    return json(R"({
-        "message": "ok"
-    })");
+    return fiasco::json{
+        {"message", "ok"}
+    };
 });
 ```
 

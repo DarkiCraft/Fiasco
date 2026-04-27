@@ -178,7 +178,7 @@ response serialize_return(T&& val) {
     return std::forward<T>(val);
   } else if constexpr (has_to_json_v<std::decay_t<T>>) {
     nlohmann::json j = val;
-    return response::json(j.dump());
+    return response::to_json(j.dump());
   } else {
     static_assert(
         !sizeof(T),
@@ -259,7 +259,7 @@ response dispatch_impl(F& fn, const request& req, size_t& path_idx,
                        di_container& di, std::index_sequence<Is...>) {
   if constexpr (std::is_void_v<std::invoke_result_t<F, std::tuple_element_t<Is, ArgsTuple>...>>) {
     fn(resolve_arg<std::tuple_element_t<Is, ArgsTuple>>(req, path_idx, di)...);
-    return response::empty();
+    return response::to_empty();
   } else {
     return serialize_return(fn(
         resolve_arg<std::tuple_element_t<Is, ArgsTuple>>(req, path_idx, di)...));

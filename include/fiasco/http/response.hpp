@@ -11,6 +11,8 @@
 #include <nlohmann/json.hpp>
 
 namespace fiasco {
+using json = nlohmann::json;
+
 /// @brief Represents an HTTP response to send to the client.
 ///
 /// Can be constructed directly or via static factory methods.
@@ -23,14 +25,14 @@ struct response {
 
   // ── Static factory methods ──────────────────────────────────────────
 
-  static response empty(int status = 204) {
+  static response to_empty(int status = 204) {
     response r;
     r.status_code = status;
     return r;
   }
 
   /// @brief Creates a plain-text response.
-  static response text(const std::string& body, int status = 200) {
+  static response to_text(const std::string& body, int status = 200) {
     response r;
     r.status_code = status;
     r.body = body;
@@ -39,7 +41,7 @@ struct response {
   }
 
   /// @brief Creates a JSON response from a pre-serialized JSON string.
-  static response json(const std::string& json_body, int status = 200) {
+  static response to_json(const std::string& json_body, int status = 200) {
     response r;
     r.status_code = status;
     r.body = json_body;
@@ -51,7 +53,7 @@ struct response {
   ///
   /// Uses nlohmann/json for serialization so message strings containing
   /// quotes or backslashes produce valid JSON.
-  static response error(int status, const std::string& message) {
+  static response to_error(const std::string& message, int status) {
     response r;
     r.status_code = status;
     nlohmann::json j;

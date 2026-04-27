@@ -9,7 +9,11 @@ int main() {
             [] { return 42; });
   }
 
-  app.get("/", [] { return "Hello from fiasco!"; });
+  app.get("/", [] {
+    return fiasco::json{
+      {"message", "Hello, World!"}
+    };
+  });
 
   app.run(8080);
 }

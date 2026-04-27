@@ -178,8 +178,8 @@ class server {
 
     if (!match.matched) {
       if (m_router.any_method_matches(req.path))
-        return response::error(405, "Method Not Allowed");
-      return response::error(404, "Not Found");
+        return response::to_error("Method Not Allowed", 405);
+      return response::to_error("Not Found", 404);
     }
 
     req.path_params = std::move(match.path_params);
@@ -188,11 +188,11 @@ class server {
     try {
       return match.handler(std::move(req));
     } catch (const nlohmann::json::exception& e) {
-      return response::error(422, e.what());
+      return response::to_error(e.what(), 422);
     } catch (const std::exception& e) {
-      return response::error(500, e.what());
+      return response::to_error(e.what(), 500);
     } catch (...) {
-      return response::error(500, "Internal Server Error");
+      return response::to_error("Internal Server Error", 500);
     }
   }
 
@@ -275,7 +275,7 @@ class server {
       if (!queued) {
         // Pool queue full — send 503 and close immediately.
         connection& c = get_connection(client_fd);
-        c.write(response::error(503, "Server Too Busy"));
+        c.write(response::to_error("Server Too Busy", 503));
         close_connection(lp, client_fd);
       }
     });

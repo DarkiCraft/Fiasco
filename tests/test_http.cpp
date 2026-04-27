@@ -34,21 +34,21 @@ TEST_CASE("request::header returns value or empty", "[http]") {
 // ── response tests ──────────────────────────────────────────────────────────
 
 TEST_CASE("response::text creates plain text response", "[http]") {
-  auto r = fiasco::response::text("hello");
+  auto r = fiasco::response::to_text("hello");
   REQUIRE(r.status_code == 200);
   REQUIRE(r.body == "hello");
   REQUIRE(r.headers["Content-Type"] == "text/plain");
 }
 
 TEST_CASE("response::json creates JSON response", "[http]") {
-  auto r = fiasco::response::json("{\"ok\":true}", 201);
+  auto r = fiasco::response::to_json(R"({"ok":true})", 201);
   REQUIRE(r.status_code == 201);
   REQUIRE(r.body == "{\"ok\":true}");
   REQUIRE(r.headers["Content-Type"] == "application/json");
 }
 
 TEST_CASE("response::error creates error response", "[http]") {
-  auto r = fiasco::response::error(404, "not found");
+  auto r = fiasco::response::to_error("not found", 404);
   REQUIRE(r.status_code == 404);
   REQUIRE(r.headers["Content-Type"] == "application/json");
 
@@ -60,7 +60,7 @@ TEST_CASE("response::error creates error response", "[http]") {
 TEST_CASE("response::error escapes special characters in message", "[http]") {
   // The old manual concatenation would have produced broken JSON here.
   const std::string tricky = R"(path "C:\foo\bar" not found)";
-  auto r = fiasco::response::error(500, tricky);
+  auto r = fiasco::response::to_error(tricky, 500);
 
   // Must parse as valid JSON — no throw.
   auto j = nlohmann::json::parse(r.body);
@@ -70,7 +70,7 @@ TEST_CASE("response::error escapes special characters in message", "[http]") {
 }
 
 TEST_CASE("response::serialize produces valid HTTP/1.1", "[http]") {
-  auto r = fiasco::response::text("hi");
+  auto r = fiasco::response::to_text("hi");
   auto raw = r.serialize();
 
   REQUIRE(raw.find("HTTP/1.1 200 OK\r\n") == 0);
