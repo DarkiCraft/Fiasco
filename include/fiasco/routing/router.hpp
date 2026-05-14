@@ -37,7 +37,9 @@ inline std::vector<std::string> split_path(const std::string& path) {
       cur += c;
     }
   }
-  if (!cur.empty()) {segs.push_back(std::move(cur));}
+  if (!cur.empty()) {
+    segs.push_back(std::move(cur));
+  }
   return segs;
 }
 
@@ -55,15 +57,15 @@ inline std::string param_name(const std::string& seg) {
 struct match_result {
   bool matched = false;
   handler_fn handler;
-  std::unordered_map<std::string, std::string> path_params;   // by name
-  std::vector<std::string> ordered_path_params;               // by position
+  std::unordered_map<std::string, std::string> path_params;  // by name
+  std::vector<std::string> ordered_path_params;              // by position
 };
 
 /// @brief A registered parameterized route (has at least one {param} segment).
 struct param_route_entry {
-  std::vector<std::string> segments;   // pre-split pattern segments
-  std::vector<std::string> names;      // param name per segment ("" if static)
-  std::vector<bool> is_param_seg;      // pre-computed per-segment flag
+  std::vector<std::string> segments;  // pre-split pattern segments
+  std::vector<std::string> names;     // param name per segment ("" if static)
+  std::vector<bool> is_param_seg;     // pre-computed per-segment flag
   handler_fn handler;
 };
 
@@ -80,8 +82,12 @@ class router {
 
     // Check if any segment is a param placeholder.
     bool has_param = false;
-    for (const auto& s : segs)
-      {if (is_param(s)) { has_param = true; break; }}
+    for (const auto& s : segs) {
+      if (is_param(s)) {
+        has_param = true;
+        break;
+      }
+    }
 
     if (!has_param) {
       // Static route: direct map insertion, O(1) match.
@@ -116,19 +122,24 @@ class router {
       auto mit = m_static_routes.find(method);
       if (mit != m_static_routes.end()) {
         auto hit = mit->second.find(path);
-        if (hit != mit->second.end())
-          {return {true, hit->second, {}, {}};}
+        if (hit != mit->second.end()) {
+          return {true, hit->second, {}, {}};
+        }
       }
     }
 
     // --- Parameterized scan ---
     auto pit = m_param_routes.find(method);
-    if (pit == m_param_routes.end()){ return {false};}
+    if (pit == m_param_routes.end()) {
+      return {false};
+    }
 
     const auto req_segs = split_path(path);
 
     for (const auto& entry : pit->second) {
-      if (entry.segments.size() != req_segs.size()) {continue;}
+      if (entry.segments.size() != req_segs.size()) {
+        continue;
+      }
 
       std::unordered_map<std::string, std::string> params;
       std::vector<std::string> ordered;
@@ -144,8 +155,9 @@ class router {
         }
       }
 
-      if (ok)
-        {return {true, entry.handler, std::move(params), std::move(ordered)};}
+      if (ok) {
+        return {true, entry.handler, std::move(params), std::move(ordered)};
+      }
     }
 
     return {false};
@@ -154,14 +166,17 @@ class router {
   /// @brief Returns true if the path matches ANY method (used for 405).
   bool any_method_matches(const std::string& path) const {
     // Check static routes first across all methods.
-    for (const auto& [method, map] : m_static_routes)
-      {if (map.count(path)) return true;}
+    for (const auto& [method, map] : m_static_routes) {
+      if (map.count(path)) return true;
+    }
 
     // Then parameterized — split once, reuse.
     const auto req_segs = split_path(path);
     for (const auto& [method, entries] : m_param_routes) {
       for (const auto& entry : entries) {
-        if (entry.segments.size() != req_segs.size()) {continue;}
+        if (entry.segments.size() != req_segs.size()) {
+          continue;
+        }
         bool ok = true;
         for (size_t i = 0; i < entry.segments.size(); ++i) {
           if (!entry.is_param_seg[i] && entry.segments[i] != req_segs[i]) {
@@ -169,7 +184,9 @@ class router {
             break;
           }
         }
-        if (ok){ return true;}
+        if (ok) {
+          return true;
+        }
       }
     }
     return false;
@@ -177,12 +194,12 @@ class router {
 
  private:
   // Static routes: method -> exact path -> handler
-  std::unordered_map<http_method,
-      std::unordered_map<std::string, handler_fn>> m_static_routes;
+  std::unordered_map<http_method, std::unordered_map<std::string, handler_fn>>
+      m_static_routes;
 
   // Parameterized routes: method -> list of entries. Linear scan on miss.
-  std::unordered_map<http_method,
-      std::vector<param_route_entry>> m_param_routes;
+  std::unordered_map<http_method, std::vector<param_route_entry>>
+      m_param_routes;
 };
 
 }  // namespace fiasco

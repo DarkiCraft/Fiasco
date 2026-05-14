@@ -146,7 +146,7 @@ struct has_to_json<T,
 template <typename T>
 constexpr bool has_to_json_v = has_to_json<T>::value;
 
-// -- Path param string -> T conversion -----------------------------------------
+// -- Path param string -> T conversion ----------------------------------------
 
 template <typename T>
 T convert_path_param(const std::string& s) {
@@ -252,12 +252,13 @@ decltype(auto) resolve_arg(const request& req, size_t& path_idx,
 template <typename F, typename ArgsTuple, size_t... Is>
 response dispatch_impl(F& fn, const request& req, size_t& path_idx,
                        di_container& di, std::index_sequence<Is...>) {
-  if constexpr (std::is_void_v<std::invoke_result_t<F, std::tuple_element_t<Is, ArgsTuple>...>>) {
+  if constexpr (std::is_void_v<std::invoke_result_t<
+                    F, std::tuple_element_t<Is, ArgsTuple>...>>) {
     fn(resolve_arg<std::tuple_element_t<Is, ArgsTuple>>(req, path_idx, di)...);
     return response::to_empty();
   } else {
-    return serialize_return(fn(
-        resolve_arg<std::tuple_element_t<Is, ArgsTuple>>(req, path_idx, di)...));
+    return serialize_return(fn(resolve_arg<std::tuple_element_t<Is, ArgsTuple>>(
+        req, path_idx, di)...));
   }
 }
 

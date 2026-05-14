@@ -4,11 +4,10 @@
 /// @file response.hpp
 /// @brief The fiasco::response data type representing an HTTP response.
 
+#include <nlohmann/json.hpp>
 #include <sstream>
 #include <string>
 #include <unordered_map>
-
-#include <nlohmann/json.hpp>
 
 namespace fiasco {
 using json = nlohmann::json;
