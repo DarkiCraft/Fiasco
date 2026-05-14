@@ -7,12 +7,12 @@
 /// Single include for framework users. Orchestrates the pipeline:
 ///
 ///   epoll event
-///      └─► connection::read()      (drain socket, feed parser)
-///      └─► connection::complete()  (check if a full request is ready)
-///      └─► thread_pool::submit()
-///              └─► server::dispatch()   (route → handler → response)
-///              └─► connection::write()  (send serialized response)
-///              └─► keep-alive / close
+///      -> connection::read()      (drain socket, feed parser)
+///      -> connection::complete()  (check if a full request is ready)
+///      -> thread_pool::submit()
+///              -> server::dispatch()   (route → handler → response)
+///              -> connection::write()  (send serialized response)
+///              -> keep-alive / close
 ///
 /// No raw POSIX calls are made here. All I/O is delegated to
 /// tcp_transport (connection helpers) and the event_loop.
@@ -21,20 +21,20 @@
 #include <thread>
 #include <unordered_map>
 
-// ── Core ────────────────────────────────────────────────────────────────────
+// -- Core --------------------------------------------------------------------
 #include "fiasco/core/event_loop.hpp"
 #include "fiasco/core/tcp_transport.hpp"
 #include "fiasco/core/thread_pool.hpp"
 
-// ── HTTP ────────────────────────────────────────────────────────────────────
+// -- HTTP --------------------------------------------------------------------
 #include "fiasco/http/parser.hpp"
 #include "fiasco/http/request.hpp"
 #include "fiasco/http/response.hpp"
 
-// ── Serialization ───────────────────────────────────────────────────────────
+// -- Serialization -----------------------------------------------------------
 #include "fiasco/serialization/model.hpp"
 
-// ── Routing ─────────────────────────────────────────────────────────────────
+// -- Routing -----------------------------------------------------------------
 #include "fiasco/routing/function_traits.hpp"
 #include "fiasco/routing/router.hpp"
 
@@ -43,7 +43,7 @@ namespace fiasco {
 /// @brief Returns the library version string.
 inline const char* version() noexcept { return "0.1.0"; }
 
-// ── Connection ───────────────────────────────────────────────────────────────
+// -- Connection ---------------------------------------------------------------
 
 /// @brief Per-connection state: owns the fd, its HTTP parser, and keep-alive
 ///        preference.
@@ -109,11 +109,11 @@ struct connection {
   void close() { close_fd(fd); }  // free function from tcp_transport.hpp
 };
 
-// ── Server ───────────────────────────────────────────────────────────────────
+// -- Server -------------------------------------------------------------------
 
 class server {
  public:
-  // ── Constructor ─────────────────────────────────────────────────────────
+  // -- Constructor ---------------------------------------------------------
 
   /// @brief Creates a server with optional tuning parameters.
   ///
@@ -128,7 +128,7 @@ class server {
                   : num_threads,
               max_queue_depth) {}
 
-  // ── Route registration ──────────────────────────────────────────────────
+  // -- Route registration --------------------------------------------------
 
   template <typename F>
   void get(const std::string& path, F&& f) {
@@ -155,7 +155,7 @@ class server {
     add(http_method::patch, path, std::forward<F>(f));
   }
 
-  // ── Dependency injection ─────────────────────────────────────────────────
+  // -- Dependency injection -------------------------------------------------
 
   /// @brief Registers a singleton factory for type T.
   ///
@@ -169,7 +169,7 @@ class server {
     m_di.provide<T>(std::forward<Factory>(factory));
   }
 
-  // ── Dispatch ─────────────────────────────────────────────────────────────
+  // -- Dispatch -------------------------------------------------------------
 
   /// @brief Routes a parsed request to the matching handler and returns the
   ///        response. All exceptions are caught and mapped to HTTP error codes.
@@ -196,7 +196,7 @@ class server {
     }
   }
 
-  // ── Run ──────────────────────────────────────────────────────────────────
+  // -- Run ------------------------------------------------------------------
 
   /// @brief Binds to host:port and enters the epoll event loop. Blocks until
   ///        stop() is called.
@@ -217,7 +217,7 @@ class server {
     event_loop loop;
 
     loop.run(transport, [&](int client_fd, event_loop& lp) {
-      // ── Read phase (epoll thread) ─────────────────────────────────────
+      // -- Read phase (epoll thread) -------------------------------------
       connection& conn = get_or_create_connection(client_fd);
 
       auto result = conn.read();
@@ -231,7 +231,7 @@ class server {
         return;  // Stay in epoll; wait for more data.
       }
 
-      // ── Full request received — hand off to thread pool ───────────────
+      // -- Full request received — hand off to thread pool ---------------
       request req = conn.take_request();
 
       // Determine keep-alive preference from the request header.
@@ -244,7 +244,7 @@ class server {
 
       bool queued = m_pool.try_submit(
           [this, &lp, client_fd, req = std::move(req)]() mutable {
-            // ── Dispatch phase (pool worker) ────────────────────────────
+            // -- Dispatch phase (pool worker) ----------------------------
             response res = dispatch(std::move(req));
 
             // Reflect the keep-alive decision in the response header.
@@ -286,7 +286,7 @@ class server {
   }
 
  private:
-  // ── Members ──────────────────────────────────────────────────────────────
+  // -- Members --------------------------------------------------------------
 
   router m_router;
   di_container m_di;
@@ -298,7 +298,7 @@ class server {
   std::unordered_map<int, connection> m_conns;
   mutable std::array<std::mutex, 16> m_conns_mtx;
 
-  // ── Private helpers ───────────────────────────────────────────────────────
+  // -- Private helpers -------------------------------------------------------
 
   /// @brief Returns the mutex shard for a given file descriptor.
   std::mutex& shard(int fd) {

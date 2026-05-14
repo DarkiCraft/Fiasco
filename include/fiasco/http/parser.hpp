@@ -34,7 +34,7 @@ class llhttp_parser {
   llhttp_parser() {
     llhttp_settings_init(&m_settings);
 
-    // ── Callbacks ───────────────────────────────────────────────────
+    // -- Callbacks ---------------------------------------------------
     m_settings.on_url = [](llhttp_t* p, const char* at, size_t len) -> int {
       auto* s = static_cast<parser_state*>(p->data);
       s->url_buf.append(at, len);
@@ -149,6 +149,7 @@ class llhttp_parser {
   parser_state m_state;
   std::string m_error_reason;
 };
+
 }  // namespace fiasco
 
 #endif  // FIASCO_HTTP_PARSER_HPP

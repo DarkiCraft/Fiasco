@@ -86,6 +86,7 @@ struct request {
     return header("Content-Type");
   }
 };
+
 }  // namespace fiasco
 
 #endif  // FIASCO_HTTP_REQUEST_HPP

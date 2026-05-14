@@ -124,6 +124,7 @@ class event_loop {
   std::vector<epoll_event> m_events;
   volatile bool m_running;
 };
+
 }  // namespace fiasco
 
 #endif  // FIASCO_EVENT_LOOP_HPP

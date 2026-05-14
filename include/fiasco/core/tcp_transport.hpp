@@ -163,7 +163,7 @@ class tcp_transport {
   socket_fd m_server_fd;
 };
 
-// ── Connection I/O helpers ────────────────────────────────────────────────────
+// -- Connection I/O helpers ----------------------------------------------------
 //
 // These free functions encapsulate all raw POSIX recv/send/close calls so
 // that higher-level code (fiasco.hpp) stays free of direct syscalls.

@@ -2,7 +2,6 @@
 #define FIASCO_SERIALIZATION_MODEL_HPP
 
 /// @file model.hpp
-/// @brief The FIASCO_MODEL macro — Pydantic for C++.
 ///
 /// A thin wrapper around NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE that
 /// generates to_json / from_json for a struct without modifying it.

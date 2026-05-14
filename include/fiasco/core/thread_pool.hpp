@@ -128,6 +128,7 @@ class thread_pool {
   bool m_stop;
   std::size_t m_max_queue;  // 0 = unbounded
 };
+
 }  // namespace fiasco
 
 #endif  // FIASCO_THREAD_POOL_HPP

@@ -22,7 +22,7 @@ namespace fiasco {
 using handler_fn = std::function<response(request)>;
 
 /// @brief Splits a path string into segments by '/'.
-/// "/users/42" → ["users", "42"]
+/// "/users/42" -> ["users", "42"]
 inline std::vector<std::string> split_path(const std::string& path) {
   std::vector<std::string> segs;
   std::string cur;

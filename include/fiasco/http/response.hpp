@@ -23,7 +23,7 @@ struct response {
   std::unordered_map<std::string, std::string> headers;
   std::string body;
 
-  // ── Static factory methods ──────────────────────────────────────────
+  // -- Static factory methods ------------------------------------------
 
   static response to_empty(int status = 204) {
     response r;
@@ -63,7 +63,7 @@ struct response {
     return r;
   }
 
-  // ── Serialization to raw HTTP ───────────────────────────────────────
+  // -- Serialization to raw HTTP ---------------------------------------
 
   /// @brief Returns the reason phrase for common status codes.
   [[nodiscard]] static const char* reason_phrase(int code) {

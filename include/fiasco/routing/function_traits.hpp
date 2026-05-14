@@ -5,16 +5,16 @@
 /// @brief Compile-time handler introspection and auto-dispatch.
 ///
 /// Dispatch rules (applied left-to-right per parameter):
-///   1. fiasco::request        → raw request passed through
+///   1. fiasco::request        -> raw request passed through
 ///   2. Primitive (int, double, float, bool, std::string)
-///      → next positional path param, converted from string
+///      -> next positional path param, converted from string
 ///   3. Non-primitive with from_json (FIASCO_MODEL)
-///      → deserialized from JSON request body (exactly one allowed)
-///   4. Anything else          → resolved from DI container
+///      -> deserialized from JSON request body (exactly one allowed)
+///   4. Anything else          -> resolved from DI container
 ///
 /// Return value rules:
-///   - fiasco::response        → passed through as-is
-///   - T with to_json          → serialized to JSON via response::json()
+///   - fiasco::response        -> passed through as-is
+///   - T with to_json          -> serialized to JSON via response::json()
 ///
 /// Primitives CANNOT be the body. Wrap in a struct.
 
@@ -33,7 +33,7 @@
 #include "router.hpp"
 
 namespace fiasco {
-// ── DI container ─────────────────────────────────────────────────────────────
+// -- DI container -------------------------------------------------------------
 
 /// @brief Singleton-scoped DI container.
 ///
@@ -82,8 +82,7 @@ class di_container {
   std::unordered_map<std::type_index, std::any> singletons_;
 };
 
-// ── Primitive detection
-// ───────────────────────────────────────────────────────
+// -- Primitive detection -----------------------------------------------------
 
 template <typename T>
 struct is_primitive : std::false_type {};
@@ -121,8 +120,7 @@ struct is_primitive<const T&> : is_primitive<T> {};
 template <typename T>
 constexpr bool is_primitive_v = is_primitive<T>::value;
 
-// ── nlohmann ADL detection
-// ────────────────────────────────────────────────────
+// -- nlohmann ADL detection --------------------------------------------------
 
 template <typename T, typename = void>
 struct has_from_json : std::false_type {};
@@ -148,7 +146,7 @@ struct has_to_json<T,
 template <typename T>
 constexpr bool has_to_json_v = has_to_json<T>::value;
 
-// ── Path param string → T conversion ─────────────────────────────────────────
+// -- Path param string → T conversion -----------------------------------------
 
 template <typename T>
 T convert_path_param(const std::string& s) {
@@ -170,7 +168,7 @@ T convert_path_param(const std::string& s) {
   }
 }
 
-// ── Return value → response serialization ────────────────────────────────────
+// -- Return value → response serialization -----------------------------------
 
 template <typename T>
 response serialize_return(T&& val) {
@@ -186,8 +184,7 @@ response serialize_return(T&& val) {
   }
 }
 
-// ── Lambda traits
-// ─────────────────────────────────────────────────────────────
+// -- Lambda traits -----------------------------------------------------------
 
 template <typename F>
 struct lambda_traits : lambda_traits<decltype(&F::operator())> {};
@@ -206,16 +203,15 @@ struct lambda_traits<R (C::*)(Args...)> {
   static constexpr size_t arity = sizeof...(Args);
 };
 
-// ── Per-argument resolver
-// ─────────────────────────────────────────────────────
+// -- Per-argument resolver ---------------------------------------------------
 
 /// @brief Resolves a single handler argument.
 ///
 /// Dispatch order:
-///   1. fiasco::request  → pass raw request
-///   2. primitive        → next positional path param
-///   3. has from_json    → deserialize request body
-///   4. anything else    → resolve from DI container
+///   1. fiasco::request  -> pass raw request
+///   2. primitive        -> next positional path param
+///   3. has from_json    -> deserialize request body
+///   4. anything else    -> resolve from DI container
 template <typename T>
 decltype(auto) resolve_arg(const request& req, size_t& path_idx,
                            di_container& di) {
@@ -251,8 +247,7 @@ decltype(auto) resolve_arg(const request& req, size_t& path_idx,
   }
 }
 
-// ── Dispatcher
-// ────────────────────────────────────────────────────────────────
+// -- Dispatcher --------------------------------------------------------------
 
 template <typename F, typename ArgsTuple, size_t... Is>
 response dispatch_impl(F& fn, const request& req, size_t& path_idx,
@@ -266,8 +261,7 @@ response dispatch_impl(F& fn, const request& req, size_t& path_idx,
   }
 }
 
-// ── make_handler
-// ──────────────────────────────────────────────────────────────
+// -- make_handler ------------------------------------------------------------
 
 // handler_fn is defined in router.hpp (already included above).
 
