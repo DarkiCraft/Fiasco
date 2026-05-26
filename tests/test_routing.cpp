@@ -36,10 +36,10 @@ struct greeter_service {
 
 // -- Helpers ------------------------------------------------------------------
 
-static fiasco::request make_request(fiasco::http_method method,
-                                    const std::string& path,
-                                    const std::string& body = "") {
-  fiasco::request req;
+static fiasco::detail::request make_request(fiasco::detail::http_method method,
+                                            const std::string& path,
+                                            const std::string& body = "") {
+  fiasco::detail::request req;
   req.method = method;
   req.path = path;
   req.body = body;
@@ -49,36 +49,44 @@ static fiasco::request make_request(fiasco::http_method method,
 // -- router: static routes ----------------------------------------------------
 
 TEST_CASE("router matches static GET route", "[router]") {
-  fiasco::detail::router r;
-  r.add_route(fiasco::http_method::get, "/hello",
-              [](fiasco::request) { return fiasco::response::to_text("hi"); });
+  fiasco::router r;
+  r.add_route(fiasco::detail::http_method::get, "/hello",
+              [](fiasco::detail::request) {
+                return fiasco::detail::response::to_text("hi");
+              });
 
-  auto m = r.match(fiasco::http_method::get, "/hello");
+  auto m = r.match(fiasco::detail::http_method::get, "/hello");
   REQUIRE(m.matched);
   REQUIRE(m.path_params.empty());
   REQUIRE(m.ordered_path_params.empty());
 }
 
 TEST_CASE("router returns unmatched for unknown path", "[router]") {
-  fiasco::detail::router r;
-  r.add_route(fiasco::http_method::get, "/hello",
-              [](fiasco::request) { return fiasco::response::to_text("hi"); });
+  fiasco::router r;
+  r.add_route(fiasco::detail::http_method::get, "/hello",
+              [](fiasco::detail::request) {
+                return fiasco::detail::response::to_text("hi");
+              });
 
-  REQUIRE_FALSE(r.match(fiasco::http_method::get, "/goodbye").matched);
+  REQUIRE_FALSE(r.match(fiasco::detail::http_method::get, "/goodbye").matched);
 }
 
 TEST_CASE("router returns unmatched for wrong method", "[router]") {
-  fiasco::detail::router r;
-  r.add_route(fiasco::http_method::get, "/hello",
-              [](fiasco::request) { return fiasco::response::to_text("hi"); });
+  fiasco::router r;
+  r.add_route(fiasco::detail::http_method::get, "/hello",
+              [](fiasco::detail::request) {
+                return fiasco::detail::response::to_text("hi");
+              });
 
-  REQUIRE_FALSE(r.match(fiasco::http_method::post, "/hello").matched);
+  REQUIRE_FALSE(r.match(fiasco::detail::http_method::post, "/hello").matched);
 }
 
 TEST_CASE("router::any_method_matches detects 405 case", "[router]") {
-  fiasco::detail::router r;
-  r.add_route(fiasco::http_method::get, "/hello",
-              [](fiasco::request) { return fiasco::response::to_text("hi"); });
+  fiasco::router r;
+  r.add_route(fiasco::detail::http_method::get, "/hello",
+              [](fiasco::detail::request) {
+                return fiasco::detail::response::to_text("hi");
+              });
 
   REQUIRE(r.any_method_matches("/hello"));
   REQUIRE_FALSE(r.any_method_matches("/nope"));
@@ -87,11 +95,13 @@ TEST_CASE("router::any_method_matches detects 405 case", "[router]") {
 // -- router: path parameters --------------------------------------------------
 
 TEST_CASE("router extracts single path param", "[router]") {
-  fiasco::detail::router r;
-  r.add_route(fiasco::http_method::get, "/users/{id}",
-              [](fiasco::request) { return fiasco::response::to_text("ok"); });
+  fiasco::router r;
+  r.add_route(fiasco::detail::http_method::get, "/users/{id}",
+              [](fiasco::detail::request) {
+                return fiasco::detail::response::to_text("ok");
+              });
 
-  auto m = r.match(fiasco::http_method::get, "/users/42");
+  auto m = r.match(fiasco::detail::http_method::get, "/users/42");
   REQUIRE(m.matched);
   REQUIRE(m.path_params.at("id") == "42");
   REQUIRE(m.ordered_path_params.size() == 1);
@@ -99,11 +109,13 @@ TEST_CASE("router extracts single path param", "[router]") {
 }
 
 TEST_CASE("router extracts multiple path params in order", "[router]") {
-  fiasco::detail::router r;
-  r.add_route(fiasco::http_method::get, "/users/{id}/items/{item_id}",
-              [](fiasco::request) { return fiasco::response::to_text("ok"); });
+  fiasco::router r;
+  r.add_route(fiasco::detail::http_method::get, "/users/{id}/items/{item_id}",
+              [](fiasco::detail::request) {
+                return fiasco::detail::response::to_text("ok");
+              });
 
-  auto m = r.match(fiasco::http_method::get, "/users/7/items/99");
+  auto m = r.match(fiasco::detail::http_method::get, "/users/7/items/99");
   REQUIRE(m.matched);
   REQUIRE(m.path_params.at("id") == "7");
   REQUIRE(m.path_params.at("item_id") == "99");
@@ -113,30 +125,35 @@ TEST_CASE("router extracts multiple path params in order", "[router]") {
 }
 
 TEST_CASE("router prefers static route over parameterized", "[router]") {
-  fiasco::detail::router r;
+  fiasco::router r;
 
   bool static_hit = false;
-  r.add_route(fiasco::http_method::get, "/users/me", [&](fiasco::request) {
-    static_hit = true;
-    return fiasco::response::to_text("me");
-  });
-  r.add_route(fiasco::http_method::get, "/users/{id}", [](fiasco::request) {
-    return fiasco::response::to_text("param");
-  });
+  r.add_route(fiasco::detail::http_method::get, "/users/me",
+              [&](fiasco::detail::request) {
+                static_hit = true;
+                return fiasco::detail::response::to_text("me");
+              });
+  r.add_route(fiasco::detail::http_method::get, "/users/{id}",
+              [](fiasco::detail::request) {
+                return fiasco::detail::response::to_text("param");
+              });
 
-  auto m = r.match(fiasco::http_method::get, "/users/me");
+  auto m = r.match(fiasco::detail::http_method::get, "/users/me");
   REQUIRE(m.matched);
-  m.handler(make_request(fiasco::http_method::get, "/users/me"));
+  m.handler(make_request(fiasco::detail::http_method::get, "/users/me"));
   REQUIRE(static_hit);
 }
 
 TEST_CASE("router does not match wrong segment count", "[router]") {
-  fiasco::detail::router r;
-  r.add_route(fiasco::http_method::get, "/users/{id}",
-              [](fiasco::request) { return fiasco::response::to_text("ok"); });
+  fiasco::router r;
+  r.add_route(fiasco::detail::http_method::get, "/users/{id}",
+              [](fiasco::detail::request) {
+                return fiasco::detail::response::to_text("ok");
+              });
 
-  REQUIRE_FALSE(r.match(fiasco::http_method::get, "/users/1/extra").matched);
-  REQUIRE_FALSE(r.match(fiasco::http_method::get, "/users").matched);
+  REQUIRE_FALSE(
+      r.match(fiasco::detail::http_method::get, "/users/1/extra").matched);
+  REQUIRE_FALSE(r.match(fiasco::detail::http_method::get, "/users").matched);
 }
 
 // -- function_traits: raw request passthrough ---------------------------------
@@ -144,12 +161,12 @@ TEST_CASE("router does not match wrong segment count", "[router]") {
 TEST_CASE("make_handler passes raw request through", "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](const fiasco::request& req) -> fiasco::response {
-        return fiasco::response::to_text(req.path);
+      [](const fiasco::detail::request& req) -> fiasco::detail::response {
+        return fiasco::detail::response::to_text(req.path);
       },
       di);
 
-  auto res = h(make_request(fiasco::http_method::get, "/hello"));
+  auto res = h(make_request(fiasco::detail::http_method::get, "/hello"));
   REQUIRE(res.status_code == 200);
   REQUIRE(res.body == "/hello");
 }
@@ -159,12 +176,12 @@ TEST_CASE("make_handler passes raw request through", "[function_traits]") {
 TEST_CASE("make_handler injects single int path param", "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](int id) -> fiasco::response {
-        return fiasco::response::to_text(std::to_string(id));
+      [](int id) -> fiasco::detail::response {
+        return fiasco::detail::response::to_text(std::to_string(id));
       },
       di);
 
-  auto req = make_request(fiasco::http_method::get, "/users/42");
+  auto req = make_request(fiasco::detail::http_method::get, "/users/42");
   req.ordered_path_params = {"42"};
 
   REQUIRE(h(req).body == "42");
@@ -174,13 +191,13 @@ TEST_CASE("make_handler injects multiple positional path params",
           "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](int id, double salary) -> fiasco::response {
-        return fiasco::response::to_text(std::to_string(id) + "," +
-                                         std::to_string(salary));
+      [](int id, double salary) -> fiasco::detail::response {
+        return fiasco::detail::response::to_text(std::to_string(id) + "," +
+                                                 std::to_string(salary));
       },
       di);
 
-  auto req = make_request(fiasco::http_method::get, "/");
+  auto req = make_request(fiasco::detail::http_method::get, "/");
   req.ordered_path_params = {"3", "1500"};
 
   auto res = h(req);
@@ -191,12 +208,13 @@ TEST_CASE("make_handler injects multiple positional path params",
 TEST_CASE("make_handler injects string path param", "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](std::string name) -> fiasco::response {
-        return fiasco::response::to_text(name);
+      [](std::string name) -> fiasco::detail::response {
+        return fiasco::detail::response::to_text(name);
       },
       di);
 
-  auto req = make_request(fiasco::http_method::get, "/greet/abdurrahman");
+  auto req =
+      make_request(fiasco::detail::http_method::get, "/greet/abdurrahman");
   req.ordered_path_params = {"abdurrahman"};
 
   REQUIRE(h(req).body == "abdurrahman");
@@ -208,13 +226,13 @@ TEST_CASE("make_handler deserializes JSON body into model",
           "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](test_body b) -> fiasco::response {
-        return fiasco::response::to_text(b.name + ":" +
-                                         std::to_string(b.value));
+      [](test_body b) -> fiasco::detail::response {
+        return fiasco::detail::response::to_text(b.name + ":" +
+                                                 std::to_string(b.value));
       },
       di);
 
-  auto req = make_request(fiasco::http_method::post, "/items",
+  auto req = make_request(fiasco::detail::http_method::post, "/items",
                           R"({"name":"fiasco","value":42})");
 
   REQUIRE(h(req).body == "fiasco:42");
@@ -223,24 +241,25 @@ TEST_CASE("make_handler deserializes JSON body into model",
 TEST_CASE("make_handler throws on malformed JSON body", "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](test_body b) -> fiasco::response {
-        return fiasco::response::to_text("ok");
+      [](test_body b) -> fiasco::detail::response {
+        return fiasco::detail::response::to_text("ok");
       },
       di);
 
-  REQUIRE_THROWS(h(make_request(fiasco::http_method::post, "/", "not json")));
+  REQUIRE_THROWS(
+      h(make_request(fiasco::detail::http_method::post, "/", "not json")));
 }
 
 TEST_CASE("make_handler throws on empty body when model expected",
           "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](test_body b) -> fiasco::response {
-        return fiasco::response::to_text("ok");
+      [](test_body b) -> fiasco::detail::response {
+        return fiasco::detail::response::to_text("ok");
       },
       di);
 
-  REQUIRE_THROWS(h(make_request(fiasco::http_method::post, "/", "")));
+  REQUIRE_THROWS(h(make_request(fiasco::detail::http_method::post, "/", "")));
 }
 
 // -- function_traits: return serialization ------------------------------------
@@ -249,9 +268,12 @@ TEST_CASE("make_handler serializes FIASCO_MODEL return to JSON",
           "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](const fiasco::request&) -> test_response { return {"hello", 7}; }, di);
+      [](const fiasco::detail::request&) -> test_response {
+        return {"hello", 7};
+      },
+      di);
 
-  auto res = h(make_request(fiasco::http_method::get, "/"));
+  auto res = h(make_request(fiasco::detail::http_method::get, "/"));
   REQUIRE(res.headers.at("Content-Type") == "application/json");
 
   auto j = nlohmann::json::parse(res.body);
@@ -263,12 +285,12 @@ TEST_CASE("make_handler passes fiasco::response return through unchanged",
           "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](const fiasco::request&) -> fiasco::response {
-        return fiasco::response::to_text("raw");
+      [](const fiasco::detail::request&) -> fiasco::detail::response {
+        return fiasco::detail::response::to_text("raw");
       },
       di);
 
-  auto res = h(make_request(fiasco::http_method::get, "/"));
+  auto res = h(make_request(fiasco::detail::http_method::get, "/"));
   REQUIRE(res.body == "raw");
   REQUIRE(res.headers.at("Content-Type") == "text/plain");
 }
@@ -284,7 +306,7 @@ TEST_CASE("make_handler handles path param + body together",
       },
       di);
 
-  auto req = make_request(fiasco::http_method::post, "/",
+  auto req = make_request(fiasco::detail::http_method::post, "/",
                           R"({"name":"fiasco","value":5})");
   req.ordered_path_params = {"10"};
 
@@ -334,12 +356,13 @@ TEST_CASE("make_handler injects DI service by reference", "[di]") {
   di.provide<counter_service>([]() { return counter_service{0}; });
 
   auto h = fiasco::detail::make_handler(
-      [](counter_service& svc) -> fiasco::response {
-        return fiasco::response::to_text(std::to_string(svc.increment()));
+      [](counter_service& svc) -> fiasco::detail::response {
+        return fiasco::detail::response::to_text(
+            std::to_string(svc.increment()));
       },
       di);
 
-  auto req = make_request(fiasco::http_method::get, "/");
+  auto req = make_request(fiasco::detail::http_method::get, "/");
   REQUIRE(h(req).body == "1");
   REQUIRE(h(req).body == "2");  // same singleton, state persists
   REQUIRE(h(req).body == "3");
@@ -350,12 +373,13 @@ TEST_CASE("make_handler injects DI service alongside path params", "[di]") {
   di.provide<greeter_service>([]() { return greeter_service{"Hello, "}; });
 
   auto h = fiasco::detail::make_handler(
-      [](std::string name, greeter_service& greeter) -> fiasco::response {
-        return fiasco::response::to_text(greeter.greet(name));
+      [](std::string name,
+         greeter_service& greeter) -> fiasco::detail::response {
+        return fiasco::detail::response::to_text(greeter.greet(name));
       },
       di);
 
-  auto req = make_request(fiasco::http_method::get, "/");
+  auto req = make_request(fiasco::detail::http_method::get, "/");
   req.ordered_path_params = {"abdurrahman"};
 
   REQUIRE(h(req).body == "Hello, abdurrahman");
@@ -365,12 +389,12 @@ TEST_CASE("make_handler throws on unregistered DI dependency", "[di]") {
   fiasco::detail::di_container di;  // counter_service NOT registered
 
   auto h = fiasco::detail::make_handler(
-      [](counter_service& svc) -> fiasco::response {
-        return fiasco::response::to_text("ok");
+      [](counter_service& svc) -> fiasco::detail::response {
+        return fiasco::detail::response::to_text("ok");
       },
       di);
 
-  REQUIRE_THROWS(h(make_request(fiasco::http_method::get, "/")));
+  REQUIRE_THROWS(h(make_request(fiasco::detail::http_method::get, "/")));
 }
 
 TEST_CASE("make_handler handles path param + body + DI together", "[di]") {
@@ -383,7 +407,7 @@ TEST_CASE("make_handler handles path param + body + DI together", "[di]") {
       },
       di);
 
-  auto req = make_request(fiasco::http_method::post, "/",
+  auto req = make_request(fiasco::detail::http_method::post, "/",
                           R"({"name":"fiasco","value":5})");
   req.ordered_path_params = {"10"};
 

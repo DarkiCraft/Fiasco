@@ -8,7 +8,8 @@
 #include <unordered_map>
 #include <vector>
 
-namespace fiasco {
+namespace fiasco::detail {
+
 /// @brief HTTP method enum.
 enum class http_method {
   get,
@@ -87,6 +88,6 @@ struct request {
   }
 };
 
-}  // namespace fiasco
+}  // namespace fiasco::detail
 
 #endif  // FIASCO_HTTP_REQUEST_HPP

@@ -10,7 +10,10 @@
 #include <unordered_map>
 
 namespace fiasco {
+
 using json = nlohmann::json;
+
+namespace detail {
 
 /// @brief Represents an HTTP response to send to the client.
 ///
@@ -121,6 +124,8 @@ struct response {
     return out.str();
   }
 };
+
+}  // namespace detail
 
 }  // namespace fiasco
 

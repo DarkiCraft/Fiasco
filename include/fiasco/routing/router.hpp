@@ -17,7 +17,9 @@
 #include "fiasco/http/request.hpp"
 #include "fiasco/http/response.hpp"
 
-namespace fiasco::detail {
+namespace fiasco {
+
+namespace detail {
 
 using handler_fn = std::function<response(request)>;
 
@@ -69,6 +71,8 @@ struct param_route_entry {
   handler_fn handler;
 };
 
+}  // namespace detail
+
 /// @brief The router. Stores routes per HTTP method.
 ///
 /// Static routes live in a flat unordered_map for O(1) lookup.
@@ -76,14 +80,14 @@ struct param_route_entry {
 class router {
  public:
   /// @brief Registers a route for the given method and pattern.
-  void add_route(http_method method, const std::string& pattern,
-                 handler_fn handler) {
-    auto segs = split_path(pattern);
+  void add_route(detail::http_method method, const std::string& pattern,
+                 detail::handler_fn handler) {
+    auto segs = detail::split_path(pattern);
 
     // Check if any segment is a param placeholder.
     bool has_param = false;
     for (const auto& s : segs) {
-      if (is_param(s)) {
+      if (detail::is_param(s)) {
         has_param = true;
         break;
       }
@@ -94,14 +98,14 @@ class router {
       m_static_routes[method][pattern] = std::move(handler);
     } else {
       // Parameterized route: precompute per-segment metadata once.
-      param_route_entry entry;
+      detail::param_route_entry entry;
       entry.segments = segs;
       entry.is_param_seg.reserve(segs.size());
       entry.names.reserve(segs.size());
       for (const auto& s : segs) {
-        if (is_param(s)) {
+        if (detail::is_param(s)) {
           entry.is_param_seg.push_back(true);
-          entry.names.push_back(param_name(s));
+          entry.names.push_back(detail::param_name(s));
         } else {
           entry.is_param_seg.push_back(false);
           entry.names.emplace_back();
@@ -116,7 +120,8 @@ class router {
   ///
   /// Tries the static map first (O(1)). On miss, scans parameterized routes
   /// linearly. Request path is split once per call.
-  match_result match(http_method method, const std::string& path) const {
+  detail::match_result match(detail::http_method method,
+                             const std::string& path) const {
     // --- Static lookup (O(1)) ---
     {
       auto mit = m_static_routes.find(method);
@@ -134,7 +139,7 @@ class router {
       return {false};
     }
 
-    const auto req_segs = split_path(path);
+    const auto req_segs = detail::split_path(path);
 
     for (const auto& entry : pit->second) {
       if (entry.segments.size() != req_segs.size()) {
@@ -171,7 +176,7 @@ class router {
     }
 
     // Then parameterized — split once, reuse.
-    const auto req_segs = split_path(path);
+    const auto req_segs = detail::split_path(path);
     for (const auto& [method, entries] : m_param_routes) {
       for (const auto& entry : entries) {
         if (entry.segments.size() != req_segs.size()) {
@@ -194,14 +199,16 @@ class router {
 
  private:
   // Static routes: method -> exact path -> handler
-  std::unordered_map<http_method, std::unordered_map<std::string, handler_fn>>
+  std::unordered_map<detail::http_method,
+                     std::unordered_map<std::string, detail::handler_fn>>
       m_static_routes;
 
   // Parameterized routes: method -> list of entries. Linear scan on miss.
-  std::unordered_map<http_method, std::vector<param_route_entry>>
+  std::unordered_map<detail::http_method,
+                     std::vector<detail::param_route_entry>>
       m_param_routes;
 };
 
-}  // namespace fiasco::detail
+}  // namespace fiasco
 
 #endif  // FIASCO_ROUTING_ROUTER_HPP

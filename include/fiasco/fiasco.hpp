@@ -98,10 +98,10 @@ struct connection {
   }
 
   /// @brief Moves the completed request out of the parser (resets for reuse).
-  [[nodiscard]] request take_request() { return parser.take_request(); }
+  [[nodiscard]] detail::request take_request() { return parser.take_request(); }
 
   /// @brief Serializes and sends the response over this connection.
-  void write(const response& res) {
+  void write(const detail::response& res) {
     auto raw = res.serialize();
     detail::send_all(fd, raw);  // free function from tcp_transport.hpp
   }
@@ -135,27 +135,27 @@ class server {
 
   template <typename F>
   void get(const std::string& path, F&& f) {
-    add(http_method::get, path, std::forward<F>(f));
+    add(detail::http_method::get, path, std::forward<F>(f));
   }
 
   template <typename F>
   void post(const std::string& path, F&& f) {
-    add(http_method::post, path, std::forward<F>(f));
+    add(detail::http_method::post, path, std::forward<F>(f));
   }
 
   template <typename F>
   void put(const std::string& path, F&& f) {
-    add(http_method::put, path, std::forward<F>(f));
+    add(detail::http_method::put, path, std::forward<F>(f));
   }
 
   template <typename F>
   void del(const std::string& path, F&& f) {
-    add(http_method::del, path, std::forward<F>(f));
+    add(detail::http_method::del, path, std::forward<F>(f));
   }
 
   template <typename F>
   void patch(const std::string& path, F&& f) {
-    add(http_method::patch, path, std::forward<F>(f));
+    add(detail::http_method::patch, path, std::forward<F>(f));
   }
 
   // -- Dependency injection -------------------------------------------------
@@ -176,13 +176,13 @@ class server {
 
   /// @brief Routes a parsed request to the matching handler and returns the
   ///        response. All exceptions are caught and mapped to HTTP error codes.
-  response dispatch(request req) {
+  detail::response dispatch(detail::request req) {
     auto match = m_router.match(req.method, req.path);
 
     if (!match.matched) {
       if (m_router.any_method_matches(req.path))
-        return response::to_error("Method Not Allowed", 405);
-      return response::to_error("Not Found", 404);
+        return detail::response::to_error("Method Not Allowed", 405);
+      return detail::response::to_error("Not Found", 404);
     }
 
     req.path_params = std::move(match.path_params);
@@ -191,11 +191,11 @@ class server {
     try {
       return match.handler(std::move(req));
     } catch (const nlohmann::json::exception& e) {
-      return response::to_error(e.what(), 422);
+      return detail::response::to_error(e.what(), 422);
     } catch (const std::exception& e) {
-      return response::to_error(e.what(), 500);
+      return detail::response::to_error(e.what(), 500);
     } catch (...) {
-      return response::to_error("Internal Server Error", 500);
+      return detail::response::to_error("Internal Server Error", 500);
     }
   }
 
@@ -235,7 +235,7 @@ class server {
       }
 
       // -- Full request received — hand off to thread pool ---------------
-      request req = conn.take_request();
+      detail::request req = conn.take_request();
 
       // Determine keep-alive preference from the request header.
       const std::string conn_hdr = req.header("Connection");
@@ -248,7 +248,7 @@ class server {
       bool queued = m_pool.try_submit(
           [this, &lp, client_fd, req = std::move(req)]() mutable {
             // -- Dispatch phase (pool worker) ----------------------------
-            response res = dispatch(std::move(req));
+            detail::response res = dispatch(std::move(req));
 
             // Reflect the keep-alive decision in the response header.
             bool keep_alive;
@@ -278,7 +278,7 @@ class server {
       if (!queued) {
         // Pool queue full — send 503 and close immediately.
         connection& c = get_connection(client_fd);
-        c.write(response::to_error("Server Too Busy", 503));
+        c.write(detail::response::to_error("Server Too Busy", 503));
         close_connection(lp, client_fd);
       }
     });
@@ -291,7 +291,7 @@ class server {
  private:
   // -- Members --------------------------------------------------------------
 
-  detail::router m_router;
+  router m_router;
   detail::di_container m_di;
   detail::thread_pool m_pool;
 
@@ -335,7 +335,7 @@ class server {
   /// @brief Wraps a user callable into a normalized handler_fn and registers
   ///        it on the router.
   template <typename F>
-  void add(http_method method, const std::string& pattern, F&& f) {
+  void add(detail::http_method method, const std::string& pattern, F&& f) {
     m_router.add_route(method, pattern, make_handler(std::forward<F>(f), m_di));
   }
 };
