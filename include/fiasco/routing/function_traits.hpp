@@ -19,6 +19,7 @@
 /// Primitives CANNOT be the body. Wrap in a struct.
 
 #include <any>
+#include <concepts>
 #include <functional>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
@@ -30,9 +31,10 @@
 
 #include "fiasco/http/request.hpp"
 #include "fiasco/http/response.hpp"
-#include "router.hpp"
+#include "fiasco/routing/router.hpp"
 
 namespace fiasco {
+
 // -- DI container -------------------------------------------------------------
 
 /// @brief Singleton-scoped DI container.
@@ -41,10 +43,10 @@ namespace fiasco {
 class di_container {
  public:
   /// @brief Registers a factory for type T. Called once; result is cached.
-  template <typename T, typename Factory>
+  template <typename T, std::invocable Factory>
   void provide(Factory&& factory) {
     auto key = std::type_index(typeid(T));
-    factories_[key] = [f = std::forward<Factory>(factory)]() -> std::any {
+    m_factories[key] = [f = std::forward<Factory>(factory)]() -> std::any {
       return std::make_any<T>(f());
     };
   }
@@ -52,129 +54,78 @@ class di_container {
   /// @brief Resolves type T from the container. Returns a stable reference.
   /// @throws std::runtime_error if T was never registered.
   template <typename T>
-  T& resolve() {
+  [[nodiscard]] T& resolve() {
     auto key = std::type_index(typeid(T));
 
-    auto sit = singletons_.find(key);
-    if (sit != singletons_.end()) {
+    if (auto sit = m_singletons.find(key); sit != m_singletons.end()) {
       return std::any_cast<T&>(sit->second);
     }
 
-    auto fit = factories_.find(key);
-    if (fit == factories_.end()) {
+    auto fit = m_factories.find(key);
+    if (fit == m_factories.end()) {
       throw std::runtime_error(
           std::string("DI: no provider registered for type: ") +
           typeid(T).name());
     }
 
-    singletons_[key] = fit->second();
-    return std::any_cast<T&>(singletons_[key]);
+    m_singletons[key] = fit->second();
+    return std::any_cast<T&>(m_singletons[key]);
   }
 
   /// @brief Returns true if T has been registered.
   template <typename T>
-  bool has() const {
-    return factories_.count(std::type_index(typeid(T))) > 0;
+  [[nodiscard]] bool has() const {
+    return m_factories.count(std::type_index(typeid(T))) > 0;
   }
 
  private:
-  std::unordered_map<std::type_index, std::function<std::any()>> factories_;
-  std::unordered_map<std::type_index, std::any> singletons_;
+  std::unordered_map<std::type_index, std::function<std::any()>> m_factories;
+  std::unordered_map<std::type_index, std::any> m_singletons;
 };
 
-// -- Primitive detection -----------------------------------------------------
+// -- Concepts -----------------------------------------------------------------
 
 template <typename T>
-struct is_primitive : std::false_type {};
-
-template <>
-struct is_primitive<int> : std::true_type {};
-
-template <>
-struct is_primitive<long> : std::true_type {};
-
-template <>
-struct is_primitive<long long> : std::true_type {};
-
-template <>
-struct is_primitive<float> : std::true_type {};
-
-template <>
-struct is_primitive<double> : std::true_type {};
-
-template <>
-struct is_primitive<bool> : std::true_type {};
-
-template <>
-struct is_primitive<std::string> : std::true_type {};
+concept Primitive = std::same_as<T, int> || std::same_as<T, long> ||
+                    std::same_as<T, long long> || std::same_as<T, float> ||
+                    std::same_as<T, double> || std::same_as<T, bool> ||
+                    std::same_as<T, std::string>;
 
 template <typename T>
-struct is_primitive<const T> : is_primitive<T> {};
+concept FromJson = requires(const nlohmann::json& j, T& v) { from_json(j, v); };
 
 template <typename T>
-struct is_primitive<T&> : is_primitive<T> {};
-
-template <typename T>
-struct is_primitive<const T&> : is_primitive<T> {};
-
-template <typename T>
-constexpr bool is_primitive_v = is_primitive<T>::value;
-
-// -- nlohmann ADL detection --------------------------------------------------
-
-template <typename T, typename = void>
-struct has_from_json : std::false_type {};
-
-template <typename T>
-struct has_from_json<
-    T, std::void_t<decltype(from_json(std::declval<const nlohmann::json&>(),
-                                      std::declval<T&>()))>> : std::true_type {
-};
-
-template <typename T>
-constexpr bool has_from_json_v = has_from_json<T>::value;
-
-template <typename T, typename = void>
-struct has_to_json : std::false_type {};
-
-template <typename T>
-struct has_to_json<T,
-                   std::void_t<decltype(to_json(std::declval<nlohmann::json&>(),
-                                                std::declval<const T&>()))>>
-    : std::true_type {};
-
-template <typename T>
-constexpr bool has_to_json_v = has_to_json<T>::value;
+concept ToJson = requires(nlohmann::json& j, const T& v) { to_json(j, v); };
 
 // -- Path param string -> T conversion ----------------------------------------
 
-template <typename T>
-T convert_path_param(const std::string& s) {
-  if constexpr (std::is_same_v<T, std::string>) {
+template <Primitive T>
+[[nodiscard]] T convert_path_param(const std::string& s) {
+  if constexpr (std::same_as<T, std::string>) {
     return s;
-  } else if constexpr (std::is_same_v<T, int> || std::is_same_v<T, long>) {
+  } else if constexpr (std::same_as<T, int> || std::same_as<T, long>) {
     return static_cast<T>(std::stol(s));
-  } else if constexpr (std::is_same_v<T, long long>) {
+  } else if constexpr (std::same_as<T, long long>) {
     return std::stoll(s);
-  } else if constexpr (std::is_same_v<T, float>) {
+  } else if constexpr (std::same_as<T, float>) {
     return std::stof(s);
-  } else if constexpr (std::is_same_v<T, double>) {
+  } else if constexpr (std::same_as<T, double>) {
     return std::stod(s);
-  } else if constexpr (std::is_same_v<T, bool>) {
+  } else if constexpr (std::same_as<T, bool>) {
     return s == "true" || s == "1";
-  } else {
-    static_assert(!sizeof(T),
-                  "Unsupported primitive type for path param conversion");
   }
+
+  // unreachable
 }
 
 // -- Return value -> response serialization -----------------------------------
 
 template <typename T>
-response serialize_return(T&& val) {
-  if constexpr (std::is_same_v<std::decay_t<T>, response>) {
+[[nodiscard]] response serialize_return(T&& val) {
+  using CleanT = std::decay_t<T>;
+  if constexpr (std::same_as<CleanT, response>) {
     return std::forward<T>(val);
-  } else if constexpr (has_to_json_v<std::decay_t<T>>) {
+  } else if constexpr (ToJson<CleanT>) {
     nlohmann::json j = val;
     return response::to_json(j.dump());
   } else {
@@ -182,9 +133,11 @@ response serialize_return(T&& val) {
         !sizeof(T),
         "Handler return type must be fiasco::response or a FIASCO_MODEL type");
   }
+
+  return {};  // unreachable
 }
 
-// -- Lambda traits -----------------------------------------------------------
+// -- Lambda traits ------------------------------------------------------------
 
 template <typename F>
 struct lambda_traits : lambda_traits<decltype(&F::operator())> {};
@@ -203,23 +156,23 @@ struct lambda_traits<R (C::*)(Args...)> {
   static constexpr size_t arity = sizeof...(Args);
 };
 
-// -- Per-argument resolver ---------------------------------------------------
+// -- Per-argument resolver ----------------------------------------------------
 
 /// @brief Resolves a single handler argument.
 ///
 /// Dispatch order:
 ///   1. fiasco::request  -> pass raw request
-///   2. primitive        -> next positional path param
-///   3. has from_json    -> deserialize request body
+///   2. Primitive        -> next positional path param
+///   3. FromJson         -> deserialize request body
 ///   4. anything else    -> resolve from DI container
 template <typename T>
 decltype(auto) resolve_arg(const request& req, size_t& path_idx,
                            di_container& di) {
   using CleanT = std::decay_t<T>;
 
-  if constexpr (std::is_same_v<CleanT, request>) {
+  if constexpr (std::same_as<CleanT, request>) {
     return req;
-  } else if constexpr (is_primitive_v<CleanT>) {
+  } else if constexpr (Primitive<CleanT>) {
     if (path_idx >= req.ordered_path_params.size()) {
       throw std::runtime_error(
           "Not enough path params for handler argument at position " +
@@ -227,7 +180,7 @@ decltype(auto) resolve_arg(const request& req, size_t& path_idx,
     }
     return static_cast<CleanT>(
         convert_path_param<CleanT>(req.ordered_path_params[path_idx++]));
-  } else if constexpr (has_from_json_v<CleanT>) {
+  } else if constexpr (FromJson<CleanT>) {
     if (req.body.empty()) {
       throw std::runtime_error(
           "Handler expects a JSON body but request body is empty");
@@ -242,12 +195,11 @@ decltype(auto) resolve_arg(const request& req, size_t& path_idx,
                                e.what());
     }
   } else {
-    // DI — T& gets a stable reference, T gets a copy
     return static_cast<T>(di.resolve<CleanT>());
   }
 }
 
-// -- Dispatcher --------------------------------------------------------------
+// -- Dispatcher ---------------------------------------------------------------
 
 template <typename F, typename ArgsTuple, size_t... Is>
 response dispatch_impl(F& fn, const request& req, size_t& path_idx,
@@ -262,17 +214,15 @@ response dispatch_impl(F& fn, const request& req, size_t& path_idx,
   }
 }
 
-// -- make_handler ------------------------------------------------------------
-
-// handler_fn is defined in router.hpp (already included above).
+// -- make_handler -------------------------------------------------------------
 
 /// @brief Wraps any compatible callable into a normalized handler_fn.
 ///
 /// The DI container is captured by reference — it must outlive all handlers.
 template <typename F>
-handler_fn make_handler(F&& f, di_container& di) {
+[[nodiscard]] handler_fn make_handler(F&& f, di_container& di) {
   using traits = lambda_traits<std::decay_t<F>>;
-  using args_tuple = typename traits::args_tuple;
+  using args_tuple = traits::args_tuple;
   constexpr size_t arity = traits::arity;
 
   return [fn = std::forward<F>(f), &di](request req) mutable -> response {
