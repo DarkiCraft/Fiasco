@@ -1,6 +1,5 @@
 # -- Tests ---------------------------------------------------------------------
 add_executable(fiasco_tests
-    test_sanity.cpp
     test_tcp_transport.cpp
     test_thread_pool.cpp
     test_event_loop.cpp

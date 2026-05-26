@@ -49,7 +49,7 @@ static fiasco::request make_request(fiasco::http_method method,
 // -- router: static routes ----------------------------------------------------
 
 TEST_CASE("router matches static GET route", "[router]") {
-  fiasco::router r;
+  fiasco::detail::router r;
   r.add_route(fiasco::http_method::get, "/hello",
               [](fiasco::request) { return fiasco::response::to_text("hi"); });
 
@@ -60,7 +60,7 @@ TEST_CASE("router matches static GET route", "[router]") {
 }
 
 TEST_CASE("router returns unmatched for unknown path", "[router]") {
-  fiasco::router r;
+  fiasco::detail::router r;
   r.add_route(fiasco::http_method::get, "/hello",
               [](fiasco::request) { return fiasco::response::to_text("hi"); });
 
@@ -68,7 +68,7 @@ TEST_CASE("router returns unmatched for unknown path", "[router]") {
 }
 
 TEST_CASE("router returns unmatched for wrong method", "[router]") {
-  fiasco::router r;
+  fiasco::detail::router r;
   r.add_route(fiasco::http_method::get, "/hello",
               [](fiasco::request) { return fiasco::response::to_text("hi"); });
 
@@ -76,7 +76,7 @@ TEST_CASE("router returns unmatched for wrong method", "[router]") {
 }
 
 TEST_CASE("router::any_method_matches detects 405 case", "[router]") {
-  fiasco::router r;
+  fiasco::detail::router r;
   r.add_route(fiasco::http_method::get, "/hello",
               [](fiasco::request) { return fiasco::response::to_text("hi"); });
 
@@ -87,7 +87,7 @@ TEST_CASE("router::any_method_matches detects 405 case", "[router]") {
 // -- router: path parameters --------------------------------------------------
 
 TEST_CASE("router extracts single path param", "[router]") {
-  fiasco::router r;
+  fiasco::detail::router r;
   r.add_route(fiasco::http_method::get, "/users/{id}",
               [](fiasco::request) { return fiasco::response::to_text("ok"); });
 
@@ -99,7 +99,7 @@ TEST_CASE("router extracts single path param", "[router]") {
 }
 
 TEST_CASE("router extracts multiple path params in order", "[router]") {
-  fiasco::router r;
+  fiasco::detail::router r;
   r.add_route(fiasco::http_method::get, "/users/{id}/items/{item_id}",
               [](fiasco::request) { return fiasco::response::to_text("ok"); });
 
@@ -113,7 +113,7 @@ TEST_CASE("router extracts multiple path params in order", "[router]") {
 }
 
 TEST_CASE("router prefers static route over parameterized", "[router]") {
-  fiasco::router r;
+  fiasco::detail::router r;
 
   bool static_hit = false;
   r.add_route(fiasco::http_method::get, "/users/me", [&](fiasco::request) {
@@ -131,7 +131,7 @@ TEST_CASE("router prefers static route over parameterized", "[router]") {
 }
 
 TEST_CASE("router does not match wrong segment count", "[router]") {
-  fiasco::router r;
+  fiasco::detail::router r;
   r.add_route(fiasco::http_method::get, "/users/{id}",
               [](fiasco::request) { return fiasco::response::to_text("ok"); });
 
@@ -142,8 +142,8 @@ TEST_CASE("router does not match wrong segment count", "[router]") {
 // -- function_traits: raw request passthrough ---------------------------------
 
 TEST_CASE("make_handler passes raw request through", "[function_traits]") {
-  fiasco::di_container di;
-  auto h = fiasco::make_handler(
+  fiasco::detail::di_container di;
+  auto h = fiasco::detail::make_handler(
       [](const fiasco::request& req) -> fiasco::response {
         return fiasco::response::to_text(req.path);
       },
@@ -157,8 +157,8 @@ TEST_CASE("make_handler passes raw request through", "[function_traits]") {
 // -- function_traits: path param injection ------------------------------------
 
 TEST_CASE("make_handler injects single int path param", "[function_traits]") {
-  fiasco::di_container di;
-  auto h = fiasco::make_handler(
+  fiasco::detail::di_container di;
+  auto h = fiasco::detail::make_handler(
       [](int id) -> fiasco::response {
         return fiasco::response::to_text(std::to_string(id));
       },
@@ -172,8 +172,8 @@ TEST_CASE("make_handler injects single int path param", "[function_traits]") {
 
 TEST_CASE("make_handler injects multiple positional path params",
           "[function_traits]") {
-  fiasco::di_container di;
-  auto h = fiasco::make_handler(
+  fiasco::detail::di_container di;
+  auto h = fiasco::detail::make_handler(
       [](int id, double salary) -> fiasco::response {
         return fiasco::response::to_text(std::to_string(id) + "," +
                                          std::to_string(salary));
@@ -189,8 +189,8 @@ TEST_CASE("make_handler injects multiple positional path params",
 }
 
 TEST_CASE("make_handler injects string path param", "[function_traits]") {
-  fiasco::di_container di;
-  auto h = fiasco::make_handler(
+  fiasco::detail::di_container di;
+  auto h = fiasco::detail::make_handler(
       [](std::string name) -> fiasco::response {
         return fiasco::response::to_text(name);
       },
@@ -206,8 +206,8 @@ TEST_CASE("make_handler injects string path param", "[function_traits]") {
 
 TEST_CASE("make_handler deserializes JSON body into model",
           "[function_traits]") {
-  fiasco::di_container di;
-  auto h = fiasco::make_handler(
+  fiasco::detail::di_container di;
+  auto h = fiasco::detail::make_handler(
       [](test_body b) -> fiasco::response {
         return fiasco::response::to_text(b.name + ":" +
                                          std::to_string(b.value));
@@ -221,8 +221,8 @@ TEST_CASE("make_handler deserializes JSON body into model",
 }
 
 TEST_CASE("make_handler throws on malformed JSON body", "[function_traits]") {
-  fiasco::di_container di;
-  auto h = fiasco::make_handler(
+  fiasco::detail::di_container di;
+  auto h = fiasco::detail::make_handler(
       [](test_body b) -> fiasco::response {
         return fiasco::response::to_text("ok");
       },
@@ -233,8 +233,8 @@ TEST_CASE("make_handler throws on malformed JSON body", "[function_traits]") {
 
 TEST_CASE("make_handler throws on empty body when model expected",
           "[function_traits]") {
-  fiasco::di_container di;
-  auto h = fiasco::make_handler(
+  fiasco::detail::di_container di;
+  auto h = fiasco::detail::make_handler(
       [](test_body b) -> fiasco::response {
         return fiasco::response::to_text("ok");
       },
@@ -247,8 +247,8 @@ TEST_CASE("make_handler throws on empty body when model expected",
 
 TEST_CASE("make_handler serializes FIASCO_MODEL return to JSON",
           "[function_traits]") {
-  fiasco::di_container di;
-  auto h = fiasco::make_handler(
+  fiasco::detail::di_container di;
+  auto h = fiasco::detail::make_handler(
       [](const fiasco::request&) -> test_response { return {"hello", 7}; }, di);
 
   auto res = h(make_request(fiasco::http_method::get, "/"));
@@ -261,8 +261,8 @@ TEST_CASE("make_handler serializes FIASCO_MODEL return to JSON",
 
 TEST_CASE("make_handler passes fiasco::response return through unchanged",
           "[function_traits]") {
-  fiasco::di_container di;
-  auto h = fiasco::make_handler(
+  fiasco::detail::di_container di;
+  auto h = fiasco::detail::make_handler(
       [](const fiasco::request&) -> fiasco::response {
         return fiasco::response::to_text("raw");
       },
@@ -277,8 +277,8 @@ TEST_CASE("make_handler passes fiasco::response return through unchanged",
 
 TEST_CASE("make_handler handles path param + body together",
           "[function_traits]") {
-  fiasco::di_container di;
-  auto h = fiasco::make_handler(
+  fiasco::detail::di_container di;
+  auto h = fiasco::detail::make_handler(
       [](int id, test_body b) -> test_response {
         return {b.name, id + b.value};
       },
@@ -296,7 +296,7 @@ TEST_CASE("make_handler handles path param + body together",
 // -- DI container: basic resolution -------------------------------------------
 
 TEST_CASE("di_container resolves registered type", "[di]") {
-  fiasco::di_container di;
+  fiasco::detail::di_container di;
   di.provide<counter_service>([]() { return counter_service{0}; });
 
   auto& svc = di.resolve<counter_service>();
@@ -304,7 +304,7 @@ TEST_CASE("di_container resolves registered type", "[di]") {
 }
 
 TEST_CASE("di_container returns same singleton instance", "[di]") {
-  fiasco::di_container di;
+  fiasco::detail::di_container di;
   di.provide<counter_service>([]() { return counter_service{0}; });
 
   auto& a = di.resolve<counter_service>();
@@ -316,12 +316,12 @@ TEST_CASE("di_container returns same singleton instance", "[di]") {
 }
 
 TEST_CASE("di_container throws on unregistered type", "[di]") {
-  fiasco::di_container di;
+  fiasco::detail::di_container di;
   REQUIRE_THROWS(di.resolve<counter_service>());
 }
 
 TEST_CASE("di_container::has returns correct availability", "[di]") {
-  fiasco::di_container di;
+  fiasco::detail::di_container di;
   REQUIRE_FALSE(di.has<counter_service>());
   di.provide<counter_service>([]() { return counter_service{}; });
   REQUIRE(di.has<counter_service>());
@@ -330,10 +330,10 @@ TEST_CASE("di_container::has returns correct availability", "[di]") {
 // -- DI: injection via make_handler -------------------------------------------
 
 TEST_CASE("make_handler injects DI service by reference", "[di]") {
-  fiasco::di_container di;
+  fiasco::detail::di_container di;
   di.provide<counter_service>([]() { return counter_service{0}; });
 
-  auto h = fiasco::make_handler(
+  auto h = fiasco::detail::make_handler(
       [](counter_service& svc) -> fiasco::response {
         return fiasco::response::to_text(std::to_string(svc.increment()));
       },
@@ -346,10 +346,10 @@ TEST_CASE("make_handler injects DI service by reference", "[di]") {
 }
 
 TEST_CASE("make_handler injects DI service alongside path params", "[di]") {
-  fiasco::di_container di;
+  fiasco::detail::di_container di;
   di.provide<greeter_service>([]() { return greeter_service{"Hello, "}; });
 
-  auto h = fiasco::make_handler(
+  auto h = fiasco::detail::make_handler(
       [](std::string name, greeter_service& greeter) -> fiasco::response {
         return fiasco::response::to_text(greeter.greet(name));
       },
@@ -362,9 +362,9 @@ TEST_CASE("make_handler injects DI service alongside path params", "[di]") {
 }
 
 TEST_CASE("make_handler throws on unregistered DI dependency", "[di]") {
-  fiasco::di_container di;  // counter_service NOT registered
+  fiasco::detail::di_container di;  // counter_service NOT registered
 
-  auto h = fiasco::make_handler(
+  auto h = fiasco::detail::make_handler(
       [](counter_service& svc) -> fiasco::response {
         return fiasco::response::to_text("ok");
       },
@@ -374,10 +374,10 @@ TEST_CASE("make_handler throws on unregistered DI dependency", "[di]") {
 }
 
 TEST_CASE("make_handler handles path param + body + DI together", "[di]") {
-  fiasco::di_container di;
+  fiasco::detail::di_container di;
   di.provide<greeter_service>([]() { return greeter_service{"Hi "}; });
 
-  auto h = fiasco::make_handler(
+  auto h = fiasco::detail::make_handler(
       [](int id, test_body b, greeter_service& greeter) -> test_response {
         return {greeter.greet(b.name), id + b.value};
       },

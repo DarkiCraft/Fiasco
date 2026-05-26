@@ -17,7 +17,7 @@
 #include "fiasco/http/request.hpp"
 #include "fiasco/http/response.hpp"
 
-namespace fiasco {
+namespace fiasco::detail {
 
 using handler_fn = std::function<response(request)>;
 
@@ -202,6 +202,6 @@ class router {
       m_param_routes;
 };
 
-}  // namespace fiasco
+}  // namespace fiasco::detail
 
 #endif  // FIASCO_ROUTING_ROUTER_HPP

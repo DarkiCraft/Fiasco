@@ -33,7 +33,7 @@
 #include "fiasco/http/response.hpp"
 #include "fiasco/routing/router.hpp"
 
-namespace fiasco {
+namespace fiasco::detail {
 
 // -- DI container -------------------------------------------------------------
 
@@ -232,6 +232,6 @@ template <typename F>
   };
 }
 
-}  // namespace fiasco
+}  // namespace fiasco::detail
 
 #endif  // FIASCO_ROUTING_FUNCTION_TRAITS_HPP

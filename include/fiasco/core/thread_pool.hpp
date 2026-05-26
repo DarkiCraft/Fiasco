@@ -11,7 +11,7 @@
 #include <thread>
 #include <vector>
 
-namespace fiasco {
+namespace fiasco::detail {
 /// @brief A simple fixed-size thread pool.
 ///
 /// Tasks are submitted via submit() and executed by worker threads.
@@ -134,6 +134,6 @@ class thread_pool {
   std::size_t m_max_queue;  // 0 = unbounded
 };
 
-}  // namespace fiasco
+}  // namespace fiasco::detail
 
 #endif  // FIASCO_THREAD_POOL_HPP

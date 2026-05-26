@@ -56,7 +56,7 @@ inline const char* version() noexcept { return "0.1.0"; }
 /// so that fiasco.hpp stays free of raw POSIX calls.
 struct connection {
   int fd;
-  llhttp_parser parser;
+  detail::llhttp_parser parser;
   bool keep_alive = true;
 
   explicit connection(int fd) : fd(fd) {}
@@ -79,7 +79,7 @@ struct connection {
   ReadResult read() {
     bool parse_error = false;
 
-    auto dr = drain(
+    auto dr = detail::drain(
         fd, [this, &parse_error](const char* buf, std::size_t len) -> bool {
           if (!parser.feed(buf, len)) {
             parse_error = true;
@@ -89,8 +89,9 @@ struct connection {
                                          // ready
         });
 
-    if (dr == drain_result::io_error || parse_error) return ReadResult::error;
-    if (dr == drain_result::closed && !parser.is_complete())
+    if (dr == detail::drain_result::io_error || parse_error)
+      return ReadResult::error;
+    if (dr == detail::drain_result::closed && !parser.is_complete())
       return ReadResult::error;
     if (parser.is_complete()) return ReadResult::complete;
     return ReadResult::partial;
@@ -102,11 +103,13 @@ struct connection {
   /// @brief Serializes and sends the response over this connection.
   void write(const response& res) {
     auto raw = res.serialize();
-    send_all(fd, raw);  // free function from tcp_transport.hpp
+    detail::send_all(fd, raw);  // free function from tcp_transport.hpp
   }
 
   /// @brief Closes the underlying fd.
-  void close() { close_fd(fd); }  // free function from tcp_transport.hpp
+  void close() {
+    detail::close_fd(fd);
+  }  // free function from tcp_transport.hpp
 };
 
 // -- Server -------------------------------------------------------------------
@@ -213,10 +216,10 @@ class server {
   /// The fd is removed from epoll *before* the task is submitted so no
   /// concurrent epoll event can fire while the pool worker owns the fd.
   void run(uint16_t port = 8080, const std::string& host = "0.0.0.0") {
-    tcp_transport transport(host, port);
-    event_loop loop;
+    detail::tcp_transport transport(host, port);
+    detail::event_loop loop;
 
-    loop.run(transport, [&](int client_fd, event_loop& lp) {
+    loop.run(transport, [&](int client_fd, detail::event_loop& lp) {
       // -- Read phase (epoll thread) -------------------------------------
       connection& conn = get_or_create_connection(client_fd);
 
@@ -288,9 +291,9 @@ class server {
  private:
   // -- Members --------------------------------------------------------------
 
-  router m_router;
-  di_container m_di;
-  thread_pool m_pool;
+  detail::router m_router;
+  detail::di_container m_di;
+  detail::thread_pool m_pool;
 
   /// Per-connection state, keyed by fd.
   /// Accessed from both the epoll thread and pool workers — always hold
@@ -319,7 +322,7 @@ class server {
   }
 
   /// @brief Removes the fd from epoll, closes it, and erases the connection.
-  void close_connection(event_loop& lp, int fd) {
+  void close_connection(detail::event_loop& lp, int fd) {
     lp.remove_fd(fd);
     std::lock_guard lk(shard(fd));
     auto it = m_conns.find(fd);

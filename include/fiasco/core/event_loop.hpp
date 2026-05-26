@@ -15,7 +15,7 @@
 
 #include "fiasco/core/tcp_transport.hpp"
 
-namespace fiasco {
+namespace fiasco::detail {
 /// @brief Callback signature for readable client connections.
 ///
 /// The callback receives the client fd and a reference to the event_loop
@@ -125,6 +125,6 @@ class event_loop {
   volatile bool m_running = false;
 };
 
-}  // namespace fiasco
+}  // namespace fiasco::detail
 
 #endif  // FIASCO_EVENT_LOOP_HPP

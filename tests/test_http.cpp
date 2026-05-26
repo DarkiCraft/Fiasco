@@ -82,7 +82,7 @@ TEST_CASE("response::serialize produces valid HTTP/1.1", "[http]") {
 // -- parser tests ------------------------------------------------------------
 
 TEST_CASE("llhttp_parser parses a simple GET request", "[parser]") {
-  fiasco::llhttp_parser parser;
+  fiasco::detail::llhttp_parser parser;
 
   const char* raw =
       "GET /users?sort=name HTTP/1.1\r\n"
@@ -104,7 +104,7 @@ TEST_CASE("llhttp_parser parses a simple GET request", "[parser]") {
 }
 
 TEST_CASE("llhttp_parser parses a POST request with body", "[parser]") {
-  fiasco::llhttp_parser parser;
+  fiasco::detail::llhttp_parser parser;
 
   std::string body = "{\"name\":\"fiasco\",\"version\":1}";
   std::string raw =
@@ -128,7 +128,7 @@ TEST_CASE("llhttp_parser parses a POST request with body", "[parser]") {
 }
 
 TEST_CASE("llhttp_parser resets for reuse", "[parser]") {
-  fiasco::llhttp_parser parser;
+  fiasco::detail::llhttp_parser parser;
 
   const char* raw1 = "GET / HTTP/1.1\r\nHost: a\r\n\r\n";
   REQUIRE(parser.feed(raw1, std::strlen(raw1)));
@@ -149,7 +149,7 @@ TEST_CASE("llhttp_parser resets for reuse", "[parser]") {
 }
 
 TEST_CASE("llhttp_parser reports errors on malformed input", "[parser]") {
-  fiasco::llhttp_parser parser;
+  fiasco::detail::llhttp_parser parser;
   const char* garbage = "NOT_HTTP garbage\r\n\r\n";
   REQUIRE_FALSE(parser.feed(garbage, std::strlen(garbage)));
   REQUIRE_FALSE(parser.error().empty());

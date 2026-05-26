@@ -32,15 +32,15 @@ static int connect_to(uint16_t port) {
 }
 
 TEST_CASE("event_loop accepts a connection and reads data", "[event_loop]") {
-  fiasco::tcp_transport transport("127.0.0.1", 0);
+  fiasco::detail::tcp_transport transport("127.0.0.1", 0);
   uint16_t port = get_bound_port(transport.server_fd());
 
-  fiasco::event_loop loop;
+  fiasco::detail::event_loop loop;
   std::string received;
 
   // Run the event loop in a background thread
   std::thread server_thread([&] {
-    loop.run(transport, [&](int client_fd, fiasco::event_loop& el) {
+    loop.run(transport, [&](int client_fd, fiasco::detail::event_loop& el) {
       char buf[256];
       ssize_t n = ::read(client_fd, buf, sizeof(buf));
       if (n > 0) {

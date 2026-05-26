@@ -10,7 +10,7 @@
 
 #include "request.hpp"
 
-namespace fiasco {
+namespace fiasco::detail {
 /// @brief Parser state accumulated during llhttp callbacks.
 struct parser_state {
   request req;
@@ -150,6 +150,6 @@ class llhttp_parser {
   std::string m_error_reason;
 };
 
-}  // namespace fiasco
+}  // namespace fiasco::detail
 
 #endif  // FIASCO_HTTP_PARSER_HPP

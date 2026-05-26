@@ -14,7 +14,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace fiasco {
+namespace fiasco::detail {
 
 /// @brief Sets a file descriptor to non-blocking mode.
 /// @throws std::runtime_error on failure.
@@ -238,6 +238,6 @@ inline void close_fd(int fd) noexcept {
   }
 }
 
-}  // namespace fiasco
+}  // namespace fiasco::detail
 
 #endif  // FIASCO_TCP_TRANSPORT_HPP
