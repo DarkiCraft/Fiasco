@@ -250,11 +250,10 @@ TEST_CASE(
   ::send(writer, chunk.c_str(), chunk.size(), 0);
 
   int call_count = 0;
-  auto result =
-      fiasco::detail::drain(reader, [&](const char*, std::size_t) -> bool {
-        ++call_count;
-        return false;  // Always stop immediately.
-      });
+  auto result = fiasco::detail::drain(reader, [&](const char*, std::size_t) {
+    ++call_count;
+    return false;  // Always stop immediately.
+  });
 
   REQUIRE(result == fiasco::detail::drain_result::feed_stopped);
   REQUIRE(call_count >= 1);
@@ -292,11 +291,10 @@ TEST_CASE("drain on an empty non-blocking socket returns drained immediately",
   auto [writer, reader] = make_socket_pair();
 
   int call_count = 0;
-  auto result =
-      fiasco::detail::drain(reader, [&](const char*, std::size_t) -> bool {
-        ++call_count;
-        return true;
-      });
+  auto result = fiasco::detail::drain(reader, [&](const char*, std::size_t) {
+    ++call_count;
+    return true;
+  });
 
   REQUIRE(result == fiasco::detail::drain_result::drained);
   REQUIRE(call_count == 0);  // callback never invoked — nothing to read

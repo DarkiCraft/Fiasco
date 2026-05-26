@@ -161,7 +161,7 @@ TEST_CASE("router does not match wrong segment count", "[router]") {
 TEST_CASE("make_handler passes raw request through", "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](const fiasco::detail::request& req) -> fiasco::detail::response {
+      [](const fiasco::detail::request& req) {
         return fiasco::detail::response::to_text(req.path);
       },
       di);
@@ -176,7 +176,7 @@ TEST_CASE("make_handler passes raw request through", "[function_traits]") {
 TEST_CASE("make_handler injects single int path param", "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](int id) -> fiasco::detail::response {
+      [](int id) {
         return fiasco::detail::response::to_text(std::to_string(id));
       },
       di);
@@ -191,7 +191,7 @@ TEST_CASE("make_handler injects multiple positional path params",
           "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](int id, double salary) -> fiasco::detail::response {
+      [](int id, double salary) {
         return fiasco::detail::response::to_text(std::to_string(id) + "," +
                                                  std::to_string(salary));
       },
@@ -208,9 +208,7 @@ TEST_CASE("make_handler injects multiple positional path params",
 TEST_CASE("make_handler injects string path param", "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](std::string name) -> fiasco::detail::response {
-        return fiasco::detail::response::to_text(name);
-      },
+      [](std::string name) { return fiasco::detail::response::to_text(name); },
       di);
 
   auto req =
@@ -226,7 +224,7 @@ TEST_CASE("make_handler deserializes JSON body into model",
           "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](test_body b) -> fiasco::detail::response {
+      [](test_body b) {
         return fiasco::detail::response::to_text(b.name + ":" +
                                                  std::to_string(b.value));
       },
@@ -241,10 +239,7 @@ TEST_CASE("make_handler deserializes JSON body into model",
 TEST_CASE("make_handler throws on malformed JSON body", "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](test_body b) -> fiasco::detail::response {
-        return fiasco::detail::response::to_text("ok");
-      },
-      di);
+      [](test_body b) { return fiasco::detail::response::to_text("ok"); }, di);
 
   REQUIRE_THROWS(
       h(make_request(fiasco::detail::http_method::post, "/", "not json")));
@@ -254,10 +249,7 @@ TEST_CASE("make_handler throws on empty body when model expected",
           "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](test_body b) -> fiasco::detail::response {
-        return fiasco::detail::response::to_text("ok");
-      },
-      di);
+      [](test_body b) { return fiasco::detail::response::to_text("ok"); }, di);
 
   REQUIRE_THROWS(h(make_request(fiasco::detail::http_method::post, "/", "")));
 }
@@ -268,9 +260,7 @@ TEST_CASE("make_handler serializes FIASCO_MODEL return to JSON",
           "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](const fiasco::detail::request&) -> test_response {
-        return {"hello", 7};
-      },
+      [](const fiasco::detail::request&) { return test_response{"hello", 7}; },
       di);
 
   auto res = h(make_request(fiasco::detail::http_method::get, "/"));
@@ -285,7 +275,7 @@ TEST_CASE("make_handler passes fiasco::response return through unchanged",
           "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](const fiasco::detail::request&) -> fiasco::detail::response {
+      [](const fiasco::detail::request&) {
         return fiasco::detail::response::to_text("raw");
       },
       di);
@@ -301,9 +291,7 @@ TEST_CASE("make_handler handles path param + body together",
           "[function_traits]") {
   fiasco::detail::di_container di;
   auto h = fiasco::detail::make_handler(
-      [](int id, test_body b) -> test_response {
-        return {b.name, id + b.value};
-      },
+      [](int id, test_body b) { return test_response{b.name, id + b.value}; },
       di);
 
   auto req = make_request(fiasco::detail::http_method::post, "/",
@@ -356,7 +344,7 @@ TEST_CASE("make_handler injects DI service by reference", "[di]") {
   di.provide<counter_service>([]() { return counter_service{0}; });
 
   auto h = fiasco::detail::make_handler(
-      [](counter_service& svc) -> fiasco::detail::response {
+      [](counter_service& svc) {
         return fiasco::detail::response::to_text(
             std::to_string(svc.increment()));
       },
@@ -373,8 +361,7 @@ TEST_CASE("make_handler injects DI service alongside path params", "[di]") {
   di.provide<greeter_service>([]() { return greeter_service{"Hello, "}; });
 
   auto h = fiasco::detail::make_handler(
-      [](std::string name,
-         greeter_service& greeter) -> fiasco::detail::response {
+      [](std::string name, greeter_service& greeter) {
         return fiasco::detail::response::to_text(greeter.greet(name));
       },
       di);
@@ -389,7 +376,7 @@ TEST_CASE("make_handler throws on unregistered DI dependency", "[di]") {
   fiasco::detail::di_container di;  // counter_service NOT registered
 
   auto h = fiasco::detail::make_handler(
-      [](counter_service& svc) -> fiasco::detail::response {
+      [](counter_service& svc) {
         return fiasco::detail::response::to_text("ok");
       },
       di);
@@ -402,8 +389,8 @@ TEST_CASE("make_handler handles path param + body + DI together", "[di]") {
   di.provide<greeter_service>([]() { return greeter_service{"Hi "}; });
 
   auto h = fiasco::detail::make_handler(
-      [](int id, test_body b, greeter_service& greeter) -> test_response {
-        return {greeter.greet(b.name), id + b.value};
+      [](int id, test_body b, greeter_service& greeter) {
+        return test_response{greeter.greet(b.name), id + b.value};
       },
       di);
 

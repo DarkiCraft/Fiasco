@@ -80,7 +80,7 @@ struct connection {
     bool parse_error = false;
 
     auto dr = detail::drain(
-        fd, [this, &parse_error](const char* buf, std::size_t len) -> bool {
+        fd, [this, &parse_error](const char* buf, std::size_t len) {
           if (!parser.feed(buf, len)) {
             parse_error = true;
             return false;  // stop — bad HTTP

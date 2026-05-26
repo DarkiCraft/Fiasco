@@ -35,14 +35,13 @@ class llhttp_parser {
     llhttp_settings_init(&m_settings);
 
     // -- Callbacks ---------------------------------------------------
-    m_settings.on_url = [](llhttp_t* p, const char* at, size_t len) -> int {
+    m_settings.on_url = [](llhttp_t* p, const char* at, size_t len) {
       auto* s = static_cast<parser_state*>(p->data);
       s->url_buf.append(at, len);
       return 0;
     };
 
-    m_settings.on_header_field = [](llhttp_t* p, const char* at,
-                                    size_t len) -> int {
+    m_settings.on_header_field = [](llhttp_t* p, const char* at, size_t len) {
       auto* s = static_cast<parser_state*>(p->data);
       if (s->last_was_value) {
         // Flush the previous header
@@ -57,15 +56,14 @@ class llhttp_parser {
       return 0;
     };
 
-    m_settings.on_header_value = [](llhttp_t* p, const char* at,
-                                    size_t len) -> int {
+    m_settings.on_header_value = [](llhttp_t* p, const char* at, size_t len) {
       auto* s = static_cast<parser_state*>(p->data);
       s->current_header_value.append(at, len);
       s->last_was_value = true;
       return 0;
     };
 
-    m_settings.on_headers_complete = [](llhttp_t* p) -> int {
+    m_settings.on_headers_complete = [](llhttp_t* p) {
       auto* s = static_cast<parser_state*>(p->data);
       // Flush last header
       if (!s->current_header_field.empty()) {
@@ -92,13 +90,13 @@ class llhttp_parser {
       return 0;
     };
 
-    m_settings.on_body = [](llhttp_t* p, const char* at, size_t len) -> int {
+    m_settings.on_body = [](llhttp_t* p, const char* at, size_t len) {
       auto* s = static_cast<parser_state*>(p->data);
       s->req.body.append(at, len);
       return 0;
     };
 
-    m_settings.on_message_complete = [](llhttp_t* p) -> int {
+    m_settings.on_message_complete = [](llhttp_t* p) {
       auto* s = static_cast<parser_state*>(p->data);
       s->message_complete = true;
       return 0;
