@@ -1,2 +1,2 @@
-add_executable(basic main.cpp)
-target_link_libraries(basic PRIVATE fiasco)
+add_executable(main main.cpp)
+target_link_libraries(main PRIVATE fiasco)

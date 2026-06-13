@@ -92,30 +92,15 @@ app.post("/users/{department_id}", [](int department_id, create_user_request req
 });
 ```
 
-### Dependency injection
-
-Register a dependency once. It's constructed on first use and cached as a singleton for subsequent calls.
-
-```c++
-app.provide<db>([]() -> db {
-    return db::connect("localhost:5432"); // dummy db
-});
-
-// dependencies are passed at the END of the handler arguments as a reference 
-app.get("/users/{id}", [](int id, db& database) {
-    return database.find(id);
-});
-```
-
 ## Planned Features
 - Query parameter parsing
+- Dependency injection
 - Middleware pipeline
 - Request logging and hooks
 - Automatic Docs Generation
 - Static file serving
 - HTTPS / TLS support
 - WebSocket support
-- HTTP/2
 
 ## Dependencies
 

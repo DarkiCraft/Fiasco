@@ -1,0 +1,85 @@
+#pragma once
+
+#include <string>
+
+#include "fiasco/internal/core/tcp_server.hpp"
+#include "fiasco/internal/http/request.hpp"
+#include "fiasco/internal/http/response.hpp"
+#include "fiasco/internal/router.hpp"
+
+namespace fiasco::detail {
+
+class server {
+  public:
+    void print_routes() const { m_router.print_routes(); }
+
+    explicit server(unsigned int num_threads = 0)
+        : m_threads(num_threads) {}
+
+    template <typename F>
+    void get(const std::string& path, F&& f) {
+        m_router.add(http_method::get, path, std::forward<F>(f));
+    }
+
+    template <typename F>
+    void post(const std::string& path, F&& f) {
+        m_router.add(http_method::post, path, std::forward<F>(f));
+    }
+
+    template <typename F>
+    void put(const std::string& path, F&& f) {
+        m_router.add(http_method::put, path, std::forward<F>(f));
+    }
+
+    template <typename F>
+    void del(const std::string& path, F&& f) {
+        m_router.add(http_method::del, path, std::forward<F>(f));
+    }
+
+    template <typename F>
+    void patch(const std::string& path, F&& f) {
+        m_router.add(http_method::patch, path, std::forward<F>(f));
+    }
+
+    void include_router(router sub, const std::string& prefix = "") {
+        m_router.include_router(sub, prefix);
+    }
+
+    void run(uint16_t port = 8080, const std::string& host = "0.0.0.0") {
+        tcp_server server(
+            port, host, [this](request req) { return dispatch(std::move(req)); }, m_threads);
+        server.run();
+    }
+
+    void stop() {}
+
+  private:
+    router m_router;
+    unsigned int m_threads = 0;
+
+    response dispatch(request req) {
+        auto match = m_router.match(req.method, req.path);
+
+        if (!match.matched) {
+            if (m_router.any_method_matches(req.path)) {
+                return response::to_error("Method Not Allowed", 405);
+            }
+            return response::to_error("Not Found", 404);
+        }
+
+        req.path_params = std::move(match.path_params);
+        req.ordered_path_params = std::move(match.ordered_path_params);
+
+        try {
+            return match.handler(std::move(req));
+        } catch (const nlohmann::json::exception& e) {
+            return response::to_error(e.what(), 422);
+        } catch (const std::exception& e) {
+            return response::to_error(e.what(), 500);
+        } catch (...) {
+            return response::to_error("Internal Server Error", 500);
+        }
+    }
+};
+
+}  // namespace fiasco::detail

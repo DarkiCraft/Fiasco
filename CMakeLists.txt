@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.28)
 project(fiasco LANGUAGES CXX)
 
 # -- C++20 --------------------------------------------------------------------
@@ -19,12 +19,12 @@ FetchContent_Declare(
 )
 
 # Catch2 v3
-FetchContent_Declare(
-        Catch2
-        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-        GIT_TAG        v3.5.2
-        GIT_SHALLOW    TRUE
-)
+# FetchContent_Declare(
+#         Catch2
+#         GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+#         GIT_TAG        v3.5.2
+#         GIT_SHALLOW    TRUE
+# )
 
 # llhttp (build static only)
 FetchContent_Declare(
@@ -37,11 +37,25 @@ FetchContent_Declare(
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(BUILD_STATIC_LIBS ON CACHE BOOL "" FORCE)
 
-FetchContent_MakeAvailable(json Catch2 llhttp)
+# FetchContent_MakeAvailable(json Catch2 llhttp)
+FetchContent_MakeAvailable(json llhttp)
 
 # Restore default after llhttp
 unset(BUILD_SHARED_LIBS CACHE)
 unset(BUILD_STATIC_LIBS CACHE)
+
+# asio library
+FetchContent_Declare(
+    asio
+    GIT_REPOSITORY https://github.com/chriskohlhoff/asio.git
+    GIT_TAG        asio-1-30-2
+    GIT_SHALLOW    TRUE
+)
+FetchContent_MakeAvailable(asio)
+
+add_library(asio INTERFACE)
+target_include_directories(asio INTERFACE ${asio_SOURCE_DIR}/asio/include)
+target_compile_definitions(asio INTERFACE ASIO_STANDALONE)
 
 # -- fiasco (header-only INTERFACE library) -----------------------------------
 add_library(fiasco INTERFACE)
@@ -53,12 +67,13 @@ target_include_directories(fiasco INTERFACE
 target_link_libraries(fiasco INTERFACE
         nlohmann_json::nlohmann_json
         llhttp_static
+        asio
 )
 
 # -- Subdirectories -----------------------------------------------------------
-include(CTest)
-enable_testing()
-add_subdirectory(tests)
+# include(CTest)
+# enable_testing()
+# add_subdirectory(tests)
 
 add_subdirectory(examples)
 

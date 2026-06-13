@@ -1,1 +1,37 @@
+---
+# Base style to inherit from
 BasedOnStyle: Google
+
+# --- Core Formatting ---
+ColumnLimit: 100
+IndentWidth: 4
+UseTab: Never
+
+# --- Classes and Namespaces ---
+AccessModifierOffset: -2
+NamespaceIndentation: None
+
+# --- Pointers and Braces ---
+PointerAlignment: Left
+BreakBeforeBraces: Attach
+InsertBraces: true
+
+# --- Switch Statements ---
+IndentCaseLabels: false
+
+# --- Wrapping and Packing ---
+BinPackParameters: false
+BinPackArguments: false
+BreakConstructorInitializers: BeforeColon
+PackConstructorInitializers: Never
+
+# --- Short Blocks and Functions ---
+AllowShortBlocksOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: true
+
+# --- Includes ---
+SortIncludes: true
+IncludeBlocks: Preserve
+...
