@@ -16,13 +16,10 @@ using asio::ip::tcp;
 using request_handler = std::function<response(request)>;
 
 struct session : std::enable_shared_from_this<session> {
-    // Strand ensures all completion handlers for this session run
-    // serially — eliminates the data race on parser/handler across
-    // the io_context thread pool with zero explicit locking.
     asio::strand<asio::io_context::executor_type> strand;
     tcp::socket socket;
     llhttp_parser parser;
-    std::array<char, 8192> buf;  // 8 KiB: fits most request headers in one read
+    std::array<char, 8192> buf;
     const request_handler& handler;
 
     session(tcp::socket sock, asio::io_context::executor_type ex, const request_handler& h)
@@ -78,9 +75,6 @@ class tcp_server {
           m_work_guard(asio::make_work_guard(m_ioc)),
           m_threads(num_threads == 0 ? std::max(std::thread::hardware_concurrency(), 2u)
                                      : num_threads) {
-        // Disable Nagle on every accepted socket via acceptor option.
-        // TCP_NODELAY is essential for request/response latency —
-        // Nagle batches small writes and adds up to 200ms delays.
         m_acceptor.set_option(tcp::no_delay(true));
     }
 
@@ -97,21 +91,17 @@ class tcp_server {
     }
 
     void stop() noexcept {
-        m_work_guard.reset();  // allow io_context::run() to drain and exit
+        m_work_guard.reset();
         m_ioc.stop();
     }
 
   private:
     void accept() {
-        // Pre-construct the socket so async_accept reuses it rather than
-        // allocating a new one internally on each accept cycle.
         m_acceptor.async_accept(m_ioc, [this](asio::error_code ec, tcp::socket socket) {
             if (!ec) {
                 std::make_shared<session>(std::move(socket), m_ioc.get_executor(), m_handler)
                     ->start();
             }
-            // Only re-arm if the acceptor is still open; prevents a
-            // tight infinite loop on persistent errors (e.g. EMFILE).
             if (m_acceptor.is_open()) {
                 accept();
             }
@@ -119,7 +109,7 @@ class tcp_server {
     }
 
     asio::io_context m_ioc;
-    request_handler m_handler;  // declared before m_acceptor: constructed first
+    request_handler m_handler;
     tcp::acceptor m_acceptor;
     asio::executor_work_guard<asio::io_context::executor_type> m_work_guard;
     unsigned int m_threads;
