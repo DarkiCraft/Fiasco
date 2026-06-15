@@ -13,10 +13,10 @@ include(FetchContent)
 
 # -- nlohmann/json ----------------------------------------
 FetchContent_Declare(
-        json
-        GIT_REPOSITORY https://github.com/nlohmann/json.git
-        GIT_TAG        v3.11.3
-        GIT_SHALLOW    TRUE
+    json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG        v3.12.0
+    GIT_SHALLOW    TRUE
 )
 
 # Catch2 v3
@@ -29,9 +29,9 @@ FetchContent_Declare(
 
 # -- llhttp -----------------------------------------------
 FetchContent_Declare(
-        llhttp
-        URL https://github.com/nodejs/llhttp/archive/refs/tags/release/v9.2.1.tar.gz
-        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    llhttp
+    URL https://github.com/nodejs/llhttp/archive/refs/tags/release/v9.2.1.tar.gz
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 
 # Force llhttp to build a static library
@@ -55,64 +55,67 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(asio)
 
 add_library(asio INTERFACE)
-target_include_directories(asio INTERFACE ${asio_SOURCE_DIR}/asio/include)
+target_include_directories(asio INTERFACE ${asio_SOURCE_DIR}/include)
 target_compile_definitions(asio INTERFACE ASIO_STANDALONE)
+if (WIN32)
+  target_compile_definitions(asio INTERFACE _WIN32_WINNT=0x0A00)
+endif()
 
 # == FIASCO ===================================================================
 
 # -- fiasco_core ------------------------------------------
 add_library(fiasco_core STATIC
-        src/fiasco/internal/core/tcp_server.cpp
+    src/fiasco/internal/core/tcp_server.cpp
 )
 
 target_include_directories(fiasco_core PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 target_link_libraries(fiasco_core PUBLIC
-        asio
+    asio
 )
 
 # -- fiasco_http ------------------------------------------
 add_library(fiasco_http STATIC
-        src/fiasco/internal/http/parser.cpp
-        src/fiasco/internal/http/request.cpp
-        src/fiasco/internal/http/response.cpp
+    src/fiasco/internal/http/parser.cpp
+    src/fiasco/internal/http/request.cpp
+    src/fiasco/internal/http/response.cpp
 )
 
 target_include_directories(fiasco_http PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 target_link_libraries(fiasco_http PUBLIC
-        nlohmann_json::nlohmann_json
-        llhttp_static
+    nlohmann_json::nlohmann_json
+    llhttp_static
 )
 
 # -- fiasco_routing ------------------------------------------
 add_library(fiasco_routing STATIC
-        src/fiasco/internal/routing/route_table.cpp
+    src/fiasco/internal/routing/route_table.cpp
 )
 
 target_include_directories(fiasco_routing PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 target_link_libraries(fiasco_routing PUBLIC
-        fiasco_http
+    fiasco_http
 )
 
 # -- fiasco -----------------------------------------------
 add_library(fiasco INTERFACE)
 
 target_include_directories(fiasco INTERFACE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 target_link_libraries(fiasco INTERFACE
-        fiasco_core
-        fiasco_http
-        fiasco_routing
+    fiasco_core
+    fiasco_http
+    fiasco_routing
 )
 
 # == SUBDIRECTORUES ===========================================================
@@ -121,7 +124,12 @@ target_link_libraries(fiasco INTERFACE
 # add_subdirectory(tests)
 
 add_subdirectory(examples)
-add_subdirectory(modules)
+
+option(FIASCO_BUILD_MODULES "Build C++ module targets" OFF)
+
+if(FIASCO_BUILD_MODULES)
+  add_subdirectory(modules)
+endif()
 
 # == INSTALLATION =============================================================
 install(DIRECTORY include/ DESTINATION include)
