@@ -77,6 +77,19 @@ target_link_libraries(fiasco_core PUBLIC
     asio
 )
 
+# -- fiasco_json -------------------------------------------
+add_library(fiasco_json STATIC
+    src/fiasco/internal/json/types.cpp
+)
+
+target_include_directories(fiasco_json PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(fiasco_json PRIVATE
+    nlohmann_json::nlohmann_json
+)
+
 # -- fiasco_http ------------------------------------------
 add_library(fiasco_http STATIC
     src/fiasco/internal/http/parser.cpp
@@ -89,7 +102,7 @@ target_include_directories(fiasco_http PUBLIC
 )
 
 target_link_libraries(fiasco_http PUBLIC
-    nlohmann_json::nlohmann_json
+    fiasco_json
     llhttp_static
 )
 
@@ -103,6 +116,7 @@ target_include_directories(fiasco_routing PUBLIC
 )
 
 target_link_libraries(fiasco_routing PUBLIC
+    fiasco_json
     fiasco_http
 )
 
@@ -115,6 +129,7 @@ target_include_directories(fiasco INTERFACE
 
 target_link_libraries(fiasco INTERFACE
     fiasco_core
+    fiasco_json
     fiasco_http
     fiasco_routing
 )
