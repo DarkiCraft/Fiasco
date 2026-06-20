@@ -103,6 +103,9 @@ class json_type {
     void merge_patch(const json_type& patch);
     void clear();
 
+    // -- Object iteration -----------------------------------------------------
+    [[nodiscard]] std::vector<std::string> object_keys() const;
+
     // -- Comparison -----------------------------------------------------------
     [[nodiscard]] bool operator==(const json_type&) const noexcept;
     [[nodiscard]] bool operator!=(const json_type&) const noexcept;
@@ -242,6 +245,22 @@ void to_json(json_type& j, const T& map) {
     j = std::move(obj);
 }
 
+template <JsonMap T>
+void from_json(const json_type& j, T& map) {
+    map.clear();
+    auto keys = j.object_keys();
+    for (const auto& key : keys) {
+        typename T::mapped_type val;
+        from_json(j[key], val);
+        if constexpr (std::convertible_to<decltype(key), typename T::key_type>) {
+            map[key] = std::move(val);
+        } else {
+            typename T::key_type k(key);
+            map[std::move(k)] = std::move(val);
+        }
+    }
+}
+
 // --- Optional<T> ---  std::optional -> value or null
 
 template <JsonOptional T>
@@ -272,6 +291,16 @@ void to_json(json_type& j, const T& tuple) {
     json_type arr = json_type::array({});
     std::apply([&arr](const auto&... args) { (arr.push_back(json_type(args)), ...); }, tuple);
     j = std::move(arr);
+}
+
+template <JsonTupleLike T, size_t... Is>
+void from_json_tuple_impl(const json_type& j, T& tuple, std::index_sequence<Is...>) {
+    ((from_json(j[Is], std::get<Is>(tuple))), ...);
+}
+
+template <JsonTupleLike T>
+void from_json(const json_type& j, T& tuple) {
+    from_json_tuple_impl(j, tuple, std::make_index_sequence<std::tuple_size_v<T>>{});
 }
 
 }  // namespace fiasco::detail

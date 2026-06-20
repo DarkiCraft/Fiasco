@@ -240,6 +240,18 @@ bool json_type::operator!=(const json_type& other) const noexcept {
     return !(*this == other);
 }
 
+// -- Object iteration --------------------------------------------------------
+
+std::vector<std::string> json_type::object_keys() const {
+    std::vector<std::string> keys;
+    const auto& j = *static_cast<const nlohmann::json*>(data());
+    if (!j.is_object()) return keys;
+    for (const auto& [key, value] : j.items()) {
+        keys.push_back(key);
+    }
+    return keys;
+}
+
 // -- Bridge helpers ----------------------------------------------------------
 
 void* json_type::data() {
