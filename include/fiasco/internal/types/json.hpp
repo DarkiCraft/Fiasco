@@ -2,9 +2,12 @@
 
 #include <cstddef>
 #include <initializer_list>
+#include <iterator>
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <tuple>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
@@ -40,7 +43,10 @@ class json_type {
     // Array from values (defined in .cpp where json_entry is complete)
     static json_type array(std::initializer_list<json_type> values);
 
-    // From user model type via ADL to_json(json_type&, const T&)
+    // From user model / container / optional / etc. via ADL to_json(json_type&, const T&)
+    // The template to_json/t_from_json families (Sequence, Map, Optional, TupleLike)
+    // below ensure a direct ADL-visible overload exists for every common type, so no
+    // silent fallback to the implicit-conversion path can occur.
     template <typename T>
     json_type(const T& val) : json_type() {
         construct_from_val(&val, [](json_type& j, const void* v) {
@@ -161,5 +167,116 @@ void to_json(json_type&, const std::string&);
 void to_json(json_type&, const char*);
 void to_json(json_type&, const json_type&);
 void from_json(const json_type&, json_type&);
+
+// -- Container concepts (defined here to break circular dep with concepts.hpp) -
+
+template <typename T>
+concept JsonRange = requires(T& t) {
+    std::begin(t);
+    std::end(t);
+};
+
+template <typename T>
+concept JsonMap = JsonRange<T> && requires { typename T::mapped_type; };
+
+template <typename T>
+concept JsonSequence = JsonRange<T> && !JsonMap<T>;
+
+template <typename T>
+concept JsonOptional = requires(T& t) {
+    typename T::value_type;
+    t.has_value();
+    t.value();
+} && !JsonRange<T>;
+
+template <typename T>
+concept JsonTupleLike = requires(T& t) {
+    std::tuple_size<std::decay_t<T>>::value;
+} && !JsonRange<T>;
+
+// -- Template ADL overload families -------------------------------------------
+// Each family has one to_json + from_json pair (from_json may be omitted when
+// the reverse direction isn't practical without key-iteration APIs).
+
+// --- Sequence<T> ---  vector, list, set, array, deque, span… -> JSON array
+
+template <JsonSequence T>
+void to_json(json_type& j, const T& seq) {
+    json_type arr = json_type::array({});
+    for (const auto& elem : seq) {
+        arr.push_back(json_type(elem));
+    }
+    j = std::move(arr);
+}
+
+template <JsonSequence T>
+void from_json(const json_type& j, T& seq) {
+    seq.clear();
+    auto n = j.size();
+    if constexpr (requires { seq.reserve(n); }) {
+        seq.reserve(n);
+    }
+    for (std::size_t i = 0; i < n; ++i) {
+        typename T::value_type elem;
+        from_json(j[i], elem);
+        if constexpr (requires (T& c, typename T::value_type& v) { c.push_back(v); }) {
+            seq.push_back(std::move(elem));
+        } else {
+            seq.insert(seq.end(), std::move(elem));
+        }
+    }
+}
+
+// --- Map<T> ---  map, unordered_map, any K->V with mapped_type -> JSON object
+
+template <JsonMap T>
+void to_json(json_type& j, const T& map) {
+    json_type obj;
+    for (const auto& [key, value] : map) {
+        json_type jv(value);
+        // Use lvalue so copy-assignment via data() is picked, not move-assignment
+        // (move-assignment on a sub-view temporary would detach from the parent).
+        if constexpr (std::convertible_to<decltype(key), std::string>) {
+            obj[static_cast<const std::string&>(key)] = jv;
+        } else {
+            obj[std::to_string(key)] = jv;
+        }
+    }
+    j = std::move(obj);
+}
+
+// --- Optional<T> ---  std::optional -> value or null
+
+template <JsonOptional T>
+void to_json(json_type& j, const T& opt) {
+    if (opt.has_value()) {
+        to_json(j, opt.value());
+    } else {
+        to_json(j, nullptr);
+    }
+}
+
+template <JsonOptional T>
+void from_json(const json_type& j, T& opt) {
+    using Inner = typename T::value_type;
+    if (j.is_null()) {
+        opt.reset();
+    } else {
+        Inner val;
+        from_json(j, val);
+        opt = std::move(val);
+    }
+}
+
+// --- TupleLike<T> ---  pair, tuple -> JSON array
+
+template <JsonTupleLike T>
+void to_json(json_type& j, const T& tuple) {
+    json_type arr = json_type::array({});
+    std::apply([&arr](const auto&... args) {
+        (arr.push_back(json_type(args)), ...);
+    }, tuple);
+    j = std::move(arr);
+}
 
 }  // namespace fiasco::detail

@@ -77,6 +77,7 @@ json_type::json_type(std::initializer_list<json_entry> entries)
 
 json_type json_type::array(std::initializer_list<json_type> values) {
     json_type j;
+    j.m_data->m_json = nlohmann::json::array();
     auto& arr = j.m_data->m_json;
     for (const auto& v : values) {
         arr.push_back(*static_cast<const nlohmann::json*>(v.data()));
