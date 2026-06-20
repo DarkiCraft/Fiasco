@@ -40,6 +40,13 @@ response response::html(const std::string& body, int status) {
     return r;
 }
 
+response response::redirect(const std::string& location, int status) {
+    response r;
+    r.status_code = status;
+    r.headers["Location"] = location;
+    return r;
+}
+
 response response::error(const std::string& message, int status) {
     response r;
     r.status_code = status;

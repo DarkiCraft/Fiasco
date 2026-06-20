@@ -14,6 +14,7 @@ struct response {
     static response text(const std::string& body, int status = 200);
     static response json(const std::string& json_body, int status = 200);
     static response html(const std::string& body, int status = 200);
+    static response redirect(const std::string& location, int status = 302);
     static response error(const std::string& message, int status);
 
     [[nodiscard]] static const char* reason_phrase(int code);
