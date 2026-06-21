@@ -45,7 +45,7 @@ cmake --install build
 | HTTP/1.1 (GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS) | ✅ |
 | Path parameters with automatic type conversion | ✅ |
 | JSON request/response models via `FIASCO_MODEL` | ✅ |
-| Type-erased JSON wrapper (no nlohmann headers leaked) | ✅ |
+| Type-erased JSON wrapper | ✅ |
 | std::optional, vector, map, tuple serialization | ✅ |
 | Sub-router mounting with path prefixes | ✅ |
 | Multi-threaded Asio-based async I/O | ✅ |
