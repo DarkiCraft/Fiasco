@@ -1,18 +1,53 @@
-# -- Tests ---------------------------------------------------------------------
-add_executable(fiasco_tests
-    test_tcp_transport.cpp
-    test_thread_pool.cpp
-    test_event_loop.cpp
-    test_http.cpp
-    test_serialization.cpp
-        test_routing.cpp
-)
-
-target_link_libraries(fiasco_tests PRIVATE
-    fiasco
-    Catch2::Catch2WithMain
-)
-
-# Register with CTest so `ctest` discovers our tests
+# === Catch2 is fetched by the root CMakeLists.txt ===
+list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 include(Catch)
-catch_discover_tests(fiasco_tests)
+
+# ---- json_test ----
+add_executable(fiasco_test_json json_test.cpp)
+target_link_libraries(fiasco_test_json PRIVATE Catch2::Catch2WithMain fiasco_types)
+catch_discover_tests(fiasco_test_json)
+
+# ---- response_test ----
+add_executable(fiasco_test_response response_test.cpp)
+target_link_libraries(fiasco_test_response PRIVATE Catch2::Catch2WithMain fiasco_http)
+catch_discover_tests(fiasco_test_response)
+
+# ---- request_test ----
+add_executable(fiasco_test_request request_test.cpp)
+target_link_libraries(fiasco_test_request PRIVATE Catch2::Catch2WithMain fiasco_http)
+catch_discover_tests(fiasco_test_request)
+
+# ---- parser_test ----
+add_executable(fiasco_test_parser parser_test.cpp)
+target_link_libraries(fiasco_test_parser PRIVATE Catch2::Catch2WithMain fiasco_http)
+catch_discover_tests(fiasco_test_parser)
+
+# ---- pathing_test ----
+add_executable(fiasco_test_pathing pathing_test.cpp)
+target_link_libraries(fiasco_test_pathing PRIVATE Catch2::Catch2WithMain fiasco_routing)
+catch_discover_tests(fiasco_test_pathing)
+
+# ---- route_table_test ----
+add_executable(fiasco_test_route_table route_table_test.cpp)
+target_link_libraries(fiasco_test_route_table PRIVATE Catch2::Catch2WithMain fiasco_routing)
+catch_discover_tests(fiasco_test_route_table)
+
+# ---- router_test ----
+add_executable(fiasco_test_router router_test.cpp)
+target_link_libraries(fiasco_test_router PRIVATE Catch2::Catch2WithMain fiasco_routing)
+catch_discover_tests(fiasco_test_router)
+
+# ---- function_traits_test ----
+add_executable(fiasco_test_function_traits function_traits_test.cpp)
+target_link_libraries(fiasco_test_function_traits PRIVATE Catch2::Catch2WithMain fiasco_routing)
+catch_discover_tests(fiasco_test_function_traits)
+
+# ---- macros_test ----
+add_executable(fiasco_test_macros macros_test.cpp)
+target_link_libraries(fiasco_test_macros PRIVATE Catch2::Catch2WithMain fiasco_types)
+catch_discover_tests(fiasco_test_macros)
+
+# ---- integration_test ----
+add_executable(fiasco_test_integration integration_test.cpp)
+target_link_libraries(fiasco_test_integration PRIVATE Catch2::Catch2WithMain fiasco)
+catch_discover_tests(fiasco_test_integration)

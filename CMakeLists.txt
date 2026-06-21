@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.28)
 project(fiasco LANGUAGES CXX)
 
 option(FIASCO_BUILD_MODULES "Build C++ module targets" OFF)
+option(FIASCO_BUILD_TESTS "Build tests" ON)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -24,14 +25,6 @@ FetchContent_Declare(
     GIT_SHALLOW    TRUE
 )
 
-# Catch2 v3
-# FetchContent_Declare(
-#         Catch2
-#         GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-#         GIT_TAG        v3.5.2
-#         GIT_SHALLOW    TRUE
-# )
-
 # -- llhttp -----------------------------------------------
 FetchContent_Declare(
     llhttp
@@ -43,8 +36,17 @@ FetchContent_Declare(
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(BUILD_STATIC_LIBS ON CACHE BOOL "" FORCE)
 
-# FetchContent_MakeAvailable(json Catch2 llhttp)
 FetchContent_MakeAvailable(json llhttp)
+
+if(FIASCO_BUILD_TESTS)
+  FetchContent_Declare(
+      Catch2
+      GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+      GIT_TAG        v3.5.2
+      GIT_SHALLOW    TRUE
+  )
+  FetchContent_MakeAvailable(Catch2)
+endif()
 
 # Restore default after llhttp
 unset(BUILD_SHARED_LIBS CACHE)
@@ -139,10 +141,13 @@ target_link_libraries(fiasco INTERFACE
     fiasco_routing
 )
 
-# == SUBDIRECTORUES ===========================================================
-# include(CTest)
-# enable_testing()
-# add_subdirectory(tests)
+# == SUBDIRECTORIES ===========================================================
+
+if(FIASCO_BUILD_TESTS)
+  include(CTest)
+  enable_testing()
+  add_subdirectory(tests)
+endif()
 
 add_subdirectory(examples)
 
