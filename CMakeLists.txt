@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.28)
 project(fiasco LANGUAGES CXX)
 
 option(FIASCO_BUILD_MODULES "Build C++ module targets" OFF)
+option(FIASCO_BUILD_EXAMPLES "Build examples" ON)
 option(FIASCO_BUILD_TESTS "Build tests" ON)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -149,7 +150,9 @@ if(FIASCO_BUILD_TESTS)
   add_subdirectory(tests)
 endif()
 
-add_subdirectory(examples)
+if(FIASCO_BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif()
 
 if(FIASCO_BUILD_MODULES)
   add_subdirectory(modules)
